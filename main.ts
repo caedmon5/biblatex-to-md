@@ -189,16 +189,17 @@ generateFileName(entry: any): string {
   // Function: Extract Author Tags //
   // ============================ //
 
+
 extractAuthorTags(authors: any): string {
   const sanitize = (str: string) =>
     str.replace(/ /g, "_").replace(/[{}]/g, "");
 
-  // Handle missing authors field
-  if (!authors || authors.trim() === "") {
+  // If authors is undefined or null
+  if (!authors) {
     return "#Unknown_Author";
   }
 
-  // Handle string of authors
+  // If authors is a string
   if (typeof authors === "string") {
     return authors
       .replace(/[{}]/g, "")
@@ -207,7 +208,22 @@ extractAuthorTags(authors: any): string {
       .join(" ");
   }
 
-  // Handle unknown cases
+  // If authors is an array
+  if (Array.isArray(authors)) {
+    return authors
+      .map((author: any) => {
+        if (typeof author === "string") {
+          return `#${sanitize(author.split(",")[0]?.trim() || "Unknown_Author")}`;
+        } else if (author.literal) {
+          return `#${sanitize(author.literal)}`;
+        } else {
+          return "#Unknown_Author";
+        }
+      })
+      .join(" ");
+  }
+
+  // Default fallback for unsupported types
   return "#Unknown_Author";
 }
 
