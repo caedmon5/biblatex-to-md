@@ -28901,11 +28901,22 @@ zoteroLink: "{{zoteroLink}}"
   // ============================ //
   extractAuthorTags(authors) {
     const sanitize = (str) => str.replace(/ /g, "_").replace(/[{}]/g, "");
-    if (!authors || authors.trim() === "") {
+    if (!authors) {
       return "#Unknown_Author";
     }
     if (typeof authors === "string") {
       return authors.replace(/[{}]/g, "").split(" and ").map((name) => `#${sanitize(name.split(",")[0]?.trim() || "Unknown_Author")}`).join(" ");
+    }
+    if (Array.isArray(authors)) {
+      return authors.map((author) => {
+        if (typeof author === "string") {
+          return `#${sanitize(author.split(",")[0]?.trim() || "Unknown_Author")}`;
+        } else if (author.literal) {
+          return `#${sanitize(author.literal)}`;
+        } else {
+          return "#Unknown_Author";
+        }
+      }).join(" ");
     }
     return "#Unknown_Author";
   }
