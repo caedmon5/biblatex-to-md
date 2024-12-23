@@ -1,0 +1,10 @@
+{
+  "id": "biblatex-to-md",
+  "name": "BibLaTeX to Markdown",
+  "version": "0.1.0",
+  "minAppVersion": "0.12.0",
+  "description": "Import BibLaTeX entries into Obsidian as Markdown notes.",
+  "author": "Your Name",
+  "authorUrl": "https://github.com/yourgithub",
+  "isDesktopOnly": false
+}
