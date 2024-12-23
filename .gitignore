@@ -1,0 +1,16 @@
+# Node.js dependencies
+node_modules/
+
+# Build files
+*.js
+*.map
+
+# Logs
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Obsidian settings
+.obsidian/
