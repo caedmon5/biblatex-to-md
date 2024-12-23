@@ -158,12 +158,23 @@ zoteroLink: "{{zoteroLink}}"
   // =============================== //
   // Function: Generate File Name    //
   // =============================== //
-  generateFileName(entry: any): string {
-    const authors = this.extractAuthorTags(entry.fields.author).replace(/#/g, "").split(" ")[0];
-    const year = entry.fields.year || "UnknownYear";
-    const title = entry.fields.title?.split(" ").slice(0, 5).join("_") || "Untitled";
-    return `LN_${authors}_${year}_${title}.md`;
-  }
+generateFileName(entry: any): string {
+  const sanitize = (str: string) =>
+    str.replace(/[\\/:*?"<>|]/g, "_"); // Replace invalid characters with underscores
+
+  const authors = this.extractAuthorTags(entry.fields.author)
+    .replace(/#/g, "")
+    .split(" ")[0];
+  const sanitizedAuthors = sanitize(authors || "Unknown_Author");
+
+  const year = entry.fields.year || "UnknownYear";
+
+  const title = entry.fields.title
+    ? sanitize(entry.fields.title.split(" ").slice(0, 5).join("_"))
+    : "Untitled";
+
+  return `LN_${sanitizedAuthors}_${year}_${title}.md`;
+}
 
   // =============================== //
   // Function: Save Markdown File    //
@@ -177,23 +188,28 @@ zoteroLink: "{{zoteroLink}}"
   // ============================ //
   // Function: Extract Author Tags //
   // ============================ //
-  extractAuthorTags(authors: any): string {
-    if (Array.isArray(authors)) {
-      return authors
-        .map((author: any) => {
-          const name = typeof author === "string" ? author : author.literal || "Unknown_Author";
-          return `#${name.split(",")[0]?.trim().replace(/ /g, "_")}`;
-        })
-        .join(" ");
-    } else if (typeof authors === "string" && authors.trim().length > 0) {
-      return authors
-        .replace(/[{}]/g, "")
-        .split(" and ")
-        .map((name) => `#${name.split(",")[0]?.trim().replace(/ /g, "_")}`)
-        .join(" ");
-    }
+
+extractAuthorTags(authors: any): string {
+  const sanitize = (str: string) =>
+    str.replace(/ /g, "_").replace(/[{}]/g, "");
+
+  // Handle missing authors field
+  if (!authors || authors.trim() === "") {
     return "#Unknown_Author";
   }
+
+  // Handle string of authors
+  if (typeof authors === "string") {
+    return authors
+      .replace(/[{}]/g, "")
+      .split(" and ")
+      .map((name) => `#${sanitize(name.split(",")[0]?.trim() || "Unknown_Author")}`)
+      .join(" ");
+  }
+
+  // Handle unknown cases
+  return "#Unknown_Author";
+}
 
   // ========================== //
   // Load and Save Settings     //
