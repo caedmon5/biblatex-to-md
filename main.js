@@ -1,9 +1,7 @@
 "use strict";
-var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -20,14 +18,6 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // node_modules/@unified-latex/unified-latex-util-print-raw/index.cjs
@@ -18279,7 +18269,7 @@ var require_verbatim = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.promises = exports2.Library = void 0;
-    exports2.parse = parse2;
+    exports2.parse = parse;
     var rx = __importStar(require_re());
     var yield_1 = require_yield();
     var ParsingError = class extends Error {
@@ -18663,7 +18653,7 @@ var require_verbatim = __commonJS({
       }
     };
     exports2.Library = Library;
-    function parse2(input, options = {}) {
+    function parse(input, options = {}) {
       const parser = new Library(input, options);
       parser.parse();
       return parser;
@@ -18683,7 +18673,7 @@ var require_jabref = __commonJS({
   "node_modules/@retorquere/bibtex-parser/jabref.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.parse = parse2;
+    exports2.parse = parse;
     function decode(s, sep = ";") {
       s = s.replace(/\r?\n/g, "");
       let pos = 0;
@@ -18704,7 +18694,7 @@ var require_jabref = __commonJS({
       }
       return records.reverse().filter((record) => record);
     }
-    function parse2(comments) {
+    function parse(comments) {
       const result = {
         root: [],
         groups: {}
@@ -27651,7 +27641,7 @@ var require_bibtex_parser = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.English = exports2.FieldMode = exports2.tokenize = exports2.toSentenceCase = void 0;
-    exports2.parse = parse2;
+    exports2.parse = parse;
     exports2.parseAsync = parseAsync;
     var unified_latex_util_replace_1 = require_unified_latex_util_replace();
     var unified_latex_util_pegjs_1 = require_unified_latex_util_pegjs();
@@ -28746,7 +28736,7 @@ ${entry.input}`, input: entry.input });
         return this.bib;
       }
     };
-    function parse2(input, options = {}) {
+    function parse(input, options = {}) {
       const parser = new BibTeXParser();
       return parser.parse(input, options);
     }
@@ -28764,173 +28754,113 @@ __export(main_exports, {
 });
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
-var bibtexParser = __toESM(require_bibtex_parser());
+var BibtexParser = require_bibtex_parser();
 var DEFAULT_SETTINGS = {
-  templatePath: "templates/biblatex_template.md",
-  entryLimit: 5
+  templatePath: "templates/bibtex-template.md"
+  // Default template path
 };
 var BibLaTeXPlugin = class extends import_obsidian.Plugin {
   async onload() {
-    console.log("Loading BibLaTeX to Markdown Plugin...");
+    console.log("BibLaTeX Plugin loaded.");
     await this.loadSettings();
+    this.addSettingTab(new BibLaTeXPluginSettingTab(this.app, this));
     this.addCommand({
       id: "import-bibtex",
-      name: "Import BibTeX File",
-      callback: () => this.importBibTeX()
-    });
-    this.addSettingTab(new BibLaTeXSettingTab(this.app, this));
-  }
-  // =========================== //
-  // Function: Import BibTeX File //
-  // =========================== //
-  async importBibTeX() {
-    const files = this.app.vault.getFiles().filter((file) => file.extension === "bib");
-    if (files.length === 0) {
-      new import_obsidian.Notice("No BibTeX files found in your vault.");
-      return;
-    }
-    for (const file of files.slice(0, this.settings.entryLimit)) {
-      const content = await this.app.vault.read(file);
-      const parsedData = bibtexParser.parse(content);
-      for (const entry of parsedData.entries) {
-        const markdown = this.generateMarkdownFromEntry(entry);
-        const fileName = this.generateFileName(entry);
-        await this.saveMarkdownFile(fileName, markdown);
+      name: "Import BibTeX",
+      callback: async () => {
+        console.log("Import BibTeX command executed.");
+        await this.importBibTeX();
       }
-    }
-    new import_obsidian.Notice("BibTeX entries imported successfully!");
+    });
   }
-  // =============================== //
-  // Function: Generate Markdown     //
-  // =============================== //
-  generateMarkdownFromEntry(entry) {
-    const fields = entry.fields || {};
-    const escapeYAML = (str) => str.replace(/"/g, `\\"`).replace(/{|}/g, "");
-    const typeMap = {
-      article: "Journal Article",
-      book: "Book",
-      inbook: "Book Section",
-      report: "Report",
-      thesis: "Thesis",
-      newspaper: "Newspaper Article",
-      online: "Webpage",
-      misc: "Miscellaneous",
-      patent: "Patent",
-      podcast: "Podcast",
-      presentation: "Presentation",
-      film: "Film",
-      software: "Software",
-      map: "Map"
-    };
-    const type = typeMap[fields.entrysubtype || fields.type || "misc"] || "Miscellaneous";
-    const title = fields.title ? escapeYAML(fields.title) : "Untitled";
-    const authors = this.extractAuthorTags(fields.author) || "#Unknown_Author";
-    const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
-    const abstract = fields.abstract ? escapeYAML(fields.abstract) : "No abstract provided.";
-    const zoteroLink = fields.url || "No link provided.";
-    let keywords = "None";
-    let formattedKeywords = "";
-    if (typeof fields.keywords === "string" && fields.keywords.trim().length > 0) {
-      const keywordArray = fields.keywords.split(",").map((k) => k.trim());
-      keywords = keywordArray.join(", ");
-      formattedKeywords = keywordArray.map((k) => `#${k.replace(/ /g, "_")}`).join(" ");
-    }
-    const replacements = {
-      citekey: entry.key || "Unknown",
-      type,
-      title,
-      authors,
-      year: year.toString(),
-      createdDate: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
-      lastModified: fields["date-modified"] || "Unknown",
-      abstract,
-      keywords,
-      formattedKeywords,
-      tags: `${authors} ${formattedKeywords}`,
-      zoteroLink
-    };
-    const templateContent = `---
-citekey: "{{citekey}}"
-type: "{{type}}"
-authors: "{{authors}}"
-createdDate: "{{createdDate}}"
-lastModified: "{{lastModified}}"
-tags: "{{tags}}"
-title: "{{title}}"
-year: "{{year}}"
-keywords: "{{keywords}}"
-zoteroLink: "{{zoteroLink}}"
----
-
-# {{title}}
-
-**Type**: {{type}}  
-**Authors**: {{authors}}  
-**Year**: {{year}}  
-
-**Keywords**: {{formattedKeywords}}
-
-**Abstract**:  
-{{abstract}}
-
-**Zotero Link**: [View in Zotero]({{zoteroLink}})
-`;
-    return templateContent.replace(/{{(.*?)}}/g, (_, key) => replacements[key.trim()] || `{{${key}}}`);
-  }
-  // =============================== //
-  // Function: Generate File Name    //
-  // =============================== //
-  generateFileName(entry) {
-    const sanitize = (str) => str.replace(/[\\/:*?"<>|]/g, "_");
-    const authors = this.extractAuthorTags(entry.fields.author).replace(/#/g, "").split(" ")[0];
-    const sanitizedAuthors = sanitize(authors || "Unknown_Author");
-    const year = entry.fields.year || "UnknownYear";
-    const title = entry.fields.title ? sanitize(entry.fields.title.split(" ").slice(0, 5).join("_")) : "Untitled";
-    return `LN_${sanitizedAuthors}_${year}_${title}.md`;
-  }
-  // =============================== //
-  // Function: Save Markdown File    //
-  // =============================== //
-  async saveMarkdownFile(fileName, content) {
-    const targetPath = `LN Literature Notes/${fileName}`;
-    await this.app.vault.create(targetPath, content);
-    console.log(`File saved: ${targetPath}`);
-  }
-  // ============================ //
-  // Function: Extract Author Tags //
-  // ============================ //
-  extractAuthorTags(authors) {
-    const sanitize = (str) => str.replace(/ /g, "_").replace(/[{}]/g, "");
-    if (!authors) {
-      return "#Unknown_Author";
-    }
-    if (typeof authors === "string") {
-      return authors.replace(/[{}]/g, "").split(" and ").map((name) => `#${sanitize(name.split(",")[0]?.trim() || "Unknown_Author")}`).join(" ");
-    }
-    if (Array.isArray(authors)) {
-      return authors.map((author) => {
-        if (typeof author === "string") {
-          return `#${sanitize(author.split(",")[0]?.trim() || "Unknown_Author")}`;
-        } else if (author.literal) {
-          return `#${sanitize(author.literal)}`;
-        } else {
-          return "#Unknown_Author";
-        }
-      }).join(" ");
-    }
-    return "#Unknown_Author";
-  }
-  // ========================== //
-  // Load and Save Settings     //
-  // ========================== //
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
   async saveSettings() {
     await this.saveData(this.settings);
   }
+  async importBibTeX() {
+    const files = this.app.vault.getFiles().filter((file) => file.extension === "bib");
+    console.log("Found .bib files:", files.map((file) => file.path));
+    if (files.length === 0) {
+      new import_obsidian.Notice("No BibTeX files found in your vault.");
+      return;
+    }
+    const coreTemplatesSettings = this.app.internalPlugins.plugins["templates"]?.instance?.options;
+    const coreTemplateFolder = coreTemplatesSettings?.folder;
+    const templatePath = coreTemplateFolder ? `${coreTemplateFolder}/bibtex-template.md` : this.settings.templatePath;
+    const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
+    if (!templateFile) {
+      new import_obsidian.Notice(`Template file not found: ${templatePath}`);
+      console.error(`Template file not found: ${templatePath}`);
+      return;
+    }
+    const templateContent = await this.app.vault.read(templateFile);
+    for (const file of files) {
+      try {
+        const content = await this.app.vault.read(file);
+        console.log(`Processing file: ${file.path}`);
+        console.log("File content:", content);
+        const parsedResult = BibtexParser.parse(content);
+        const parsedEntries = parsedResult.entries;
+        console.log("Parsed entries:", parsedEntries);
+        for (const entry of parsedEntries) {
+          console.log("Parsed entry:", entry);
+          const fields = entry.fields || {};
+          const title = fields.title || "Untitled";
+          let authors = fields.author || "Unknown Author";
+          if (typeof authors === "string") {
+            const authorParts = authors.replace(/[{}]/g, "").split(",");
+            authors = authorParts[0]?.trim() || "Unknown Author";
+          } else if (Array.isArray(authors)) {
+            authors = authors.map((a) => a.lastName || "Unknown").join(", ");
+          } else if (typeof authors === "object" && authors.lastName) {
+            authors = authors.lastName;
+          } else {
+            authors = String(authors);
+          }
+          const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
+          const abstract = fields.abstract || "No abstract provided.";
+          const journaltitle = fields.journaltitle || "Unknown Journal";
+          const keywords = fields.keywords || "None";
+          const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
+            const replacements = {
+              type: entry.type || "Unknown Type",
+              authors,
+              title,
+              year,
+              abstract,
+              journaltitle,
+              keywords
+            };
+            const value = replacements[key.trim()];
+            if (value === void 0) {
+              console.warn(`Warning: No replacement found for placeholder "{{${key}}}".`);
+              return `{{${key}}}`;
+            }
+            return value;
+          });
+          const folderPath = "LN Literature Notes";
+          if (!this.app.vault.getAbstractFileByPath(folderPath)) {
+            await this.app.vault.createFolder(folderPath);
+          }
+          const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
+          const sanitizedAuthors = authors.replace(/[\/\\:*?"<>|]/g, "_");
+          const fileName = `LN ${sanitizedAuthors} ${year} ${sanitizedTitle}.md`;
+          await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
+          console.log(`Created Markdown file: ${folderPath}/${fileName}`);
+        }
+      } catch (error) {
+        console.error(`Error processing file ${file.path}:`, error);
+      }
+    }
+    new import_obsidian.Notice("BibTeX entries imported successfully!");
+  }
+  onunload() {
+    console.log("BibLaTeX Plugin unloaded.");
+  }
 };
-var BibLaTeXSettingTab = class extends import_obsidian.PluginSettingTab {
+var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -28938,16 +28868,10 @@ var BibLaTeXSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "BibLaTeX to Markdown Settings" });
-    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Path to your Obsidian template file").addText(
-      (text) => text.setPlaceholder("templates/biblatex_template.md").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
+    containerEl.createEl("h2", { text: "BibLaTeX Plugin Settings" });
+    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Path to the template file used for generating Markdown notes.").addText(
+      (text) => text.setPlaceholder("templates/bibtex-template.md").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
         this.plugin.settings.templatePath = value;
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Maximum number of BibTeX entries to process at once").addSlider(
-      (slider) => slider.setLimits(1, 100, 1).setValue(this.plugin.settings.entryLimit).onChange(async (value) => {
-        this.plugin.settings.entryLimit = value;
         await this.plugin.saveSettings();
       })
     );
