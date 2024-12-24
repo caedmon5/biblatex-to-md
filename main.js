@@ -28831,7 +28831,13 @@ var BibLaTeXPlugin = class extends import_obsidian.Plugin {
               year,
               abstract,
               journaltitle,
-              keywords
+              keywords,
+              publisher: fields.publisher || "Unknown Publisher",
+              volume: fields.volume || "N/A",
+              issue: fields.issue || "N/A",
+              pages: fields.pages || "N/A",
+              doi: fields.doi || "N/A",
+              url: fields.url || "No URL provided"
             };
             const value = replacements[key.trim()];
             if (value === void 0) {

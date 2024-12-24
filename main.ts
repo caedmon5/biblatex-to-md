@@ -105,15 +105,21 @@ export default class BibLaTeXPlugin extends Plugin {
 
           // Replace placeholders in the template
           const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
-            const replacements: Record<string, string> = {
-              type: entry.type || "Unknown Type",
-              authors,
-              title,
-              year,
-              abstract,
-              journaltitle,
-              keywords,
-            };
+const replacements: Record<string, string> = {
+  type: entry.type || "Unknown Type",
+  authors,
+  title,
+  year,
+  abstract,
+  journaltitle,
+  keywords,
+  publisher: fields.publisher || "Unknown Publisher",
+  volume: fields.volume || "N/A",
+  issue: fields.issue || "N/A",
+  pages: fields.pages || "N/A",
+  doi: fields.doi || "N/A",
+  url: fields.url || "No URL provided"
+};
 
             const value = replacements[key.trim()];
             if (value === undefined) {
