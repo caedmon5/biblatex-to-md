@@ -1,216 +1,177 @@
-import { App, Notice, Plugin, PluginSettingTab, Setting, TFile } from "obsidian";
-import * as bibtexParser from "@retorquere/bibtex-parser";
 
-// ====================== //
-// Plugin Settings Object //
-// ====================== //
+// Import necessary Obsidian classes and external modules
+import { Plugin, Notice, PluginSettingTab, Setting } from "obsidian";
+const BibtexParser = require("@retorquere/bibtex-parser");
+
+// Define plugin settings and their defaults
 interface BibLaTeXPluginSettings {
   templatePath: string;
-  entryLimit: number;
 }
 
-// ========================== //
-// Default Settings           //
-// ========================== //
 const DEFAULT_SETTINGS: BibLaTeXPluginSettings = {
-  templatePath: "templates/biblatex_template.md",
-  entryLimit: 5,
+  templatePath: "templates/bibtex-template.md", // Default template path
 };
 
-// ========================== //
-// Main Plugin Class          //
-// ========================== //
+// Main plugin class
 export default class BibLaTeXPlugin extends Plugin {
   settings: BibLaTeXPluginSettings;
 
+  // Plugin initialization and setup
   async onload() {
-    console.log("Loading BibLaTeX to Markdown Plugin...");
+    console.log("BibLaTeX Plugin loaded.");
 
     // Load settings
     await this.loadSettings();
 
-    // Register command to import BibTeX files
+    // Create a settings tab for user configuration
+    this.addSettingTab(new BibLaTeXPluginSettingTab(this.app, this));
+
+    // Register plugin commands
     this.addCommand({
       id: "import-bibtex",
-      name: "Import BibTeX File",
-      callback: () => this.importBibTeX(),
+      name: "Import BibTeX",
+      callback: async () => {
+        console.log("Import BibTeX command executed.");
+        await this.importBibTeX();
+      },
     });
-
-    // Add settings tab
-    this.addSettingTab(new BibLaTeXSettingTab(this.app, this));
   }
 
-  // =========================== //
-  // Function: Import BibTeX File //
-  // =========================== //
+  async loadSettings() {
+    // Load plugin settings from Obsidian storage
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    // Save plugin settings to Obsidian storage
+    await this.saveData(this.settings);
+  }
+
   async importBibTeX() {
+    // Function to parse and import BibTeX files
     const files = this.app.vault.getFiles().filter((file) => file.extension === "bib");
+    console.log("Found .bib files:", files.map((file) => file.path));
 
     if (files.length === 0) {
+      // Notify user if no .bib files are found
       new Notice("No BibTeX files found in your vault.");
       return;
     }
 
-    for (const file of files.slice(0, this.settings.entryLimit)) {
-      const content = await this.app.vault.read(file);
-      const parsedData = bibtexParser.parse(content);
+    // Get core template folder if available
+    const coreTemplatesSettings = (this.app as any).internalPlugins.plugins["templates"]?.instance?.options;
+    const coreTemplateFolder = coreTemplatesSettings?.folder;
 
-      for (const entry of parsedData.entries) {
-        const markdown = this.generateMarkdownFromEntry(entry);
-        const fileName = this.generateFileName(entry);
+    // Fallback to plugin settings template path
+    const templatePath = coreTemplateFolder
+      ? `${coreTemplateFolder}/bibtex-template.md`
+      : this.settings.templatePath;
 
-        await this.saveMarkdownFile(fileName, markdown);
+    const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
+    if (!templateFile) {
+      new Notice(`Template file not found: ${templatePath}`);
+      console.error(`Template file not found: ${templatePath}`);
+      return;
+    }
+
+    const templateContent = await this.app.vault.read(templateFile);
+
+    for (const file of files) {
+      try {
+        // Read content of the BibTeX file
+        const content = await this.app.vault.read(file);
+        console.log(`Processing file: ${file.path}`);
+        
+        // added for debugging
+        if (this.settings.debugMode) {
+  		console.log("File content:", content);
+	}
+
+
+        // Parse the BibTeX file into entries
+        const parsedResult = BibtexParser.parse(content);
+        const parsedEntries = parsedResult.entries;
+        console.log("Parsed entries:", parsedEntries);
+
+        for (const entry of parsedEntries) {
+          console.log("Parsed entry:", entry);
+
+          const fields = entry.fields || {};
+          const title = fields.title || "Untitled";
+
+          let authors = fields.author || "Unknown Author";
+
+          // Ensure authors is always a string
+          if (typeof authors === "string") {
+            const authorParts = authors.replace(/[{}]/g, "").split(",");
+            authors = authorParts[0]?.trim() || "Unknown Author";
+          } else if (Array.isArray(authors)) {
+            authors = authors.map((a) => a.lastName || "Unknown").join(", ");
+          } else if (typeof authors === "object" && authors.lastName) {
+            authors = authors.lastName;
+          } else {
+            authors = String(authors); // Fallback to ensure it's a string
+          }
+
+          const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
+          const abstract = fields.abstract || "No abstract provided.";
+          const journaltitle = fields.journaltitle || "Unknown Journal";
+          const keywords = fields.keywords || "None";
+
+          // Replace placeholders in the template
+          const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
+            const replacements: Record<string, string> = {
+              type: entry.type || "Unknown Type",
+              authors,
+              title,
+              year,
+              abstract,
+              journaltitle,
+              keywords,
+              publisher: fields.publisher || "Unknown Publisher",
+              volume: fields.volume || "N/A",
+              issue: fields.issue || "N/A",
+              pages: fields.pages || "N/A",
+              doi: fields.doi || "N/A",
+              url: fields.url || "No URL provided"
+            };
+
+            const value = replacements[key.trim()];
+            if (value === undefined) {
+              console.warn(`Warning: No replacement found for placeholder "{{${key}}}".`);
+              return `{{${key}}}`; // Keep the placeholder if no match
+            }
+            return value;
+          });
+
+          const folderPath = "LN Literature Notes";
+          if (!this.app.vault.getAbstractFileByPath(folderPath)) {
+            await this.app.vault.createFolder(folderPath);
+          }
+
+          const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
+          const sanitizedAuthors = authors.replace(/[\/\\:*?"<>|]/g, "_");
+          const fileName = `LN ${sanitizedAuthors} ${year} ${sanitizedTitle}.md`;
+
+          await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
+          console.log(`Created Markdown file: ${folderPath}/${fileName}`);
+        }
+      } catch (error) {
+        console.error(`Error processing file ${file.path}:`, error);
       }
     }
 
     new Notice("BibTeX entries imported successfully!");
   }
 
-  // =============================== //
-  // Function: Generate Markdown     //
-  // =============================== //
-  generateMarkdownFromEntry(entry: any): string {
-    const fields = entry.fields || {};
-    const escapeYAML = (str: string) => str.replace(/"/g, `\\"`).replace(/{|}/g, "");
-
-    // Type Mapping
-    const typeMap: Record<string, string> = {
-      article: "Journal Article",
-      book: "Book",
-      inbook: "Book Section",
-      report: "Report",
-      thesis: "Thesis",
-      newspaper: "Newspaper Article",
-      online: "Webpage",
-      misc: "Miscellaneous",
-      patent: "Patent",
-      podcast: "Podcast",
-      presentation: "Presentation",
-      film: "Film",
-      software: "Software",
-      map: "Map",
-    };
-
-    const type = typeMap[fields.entrysubtype || fields.type || "misc"] || "Miscellaneous";
-    const title = fields.title ? escapeYAML(fields.title) : "Untitled";
-    const authors = this.extractAuthorTags(fields.author) || "#Unknown_Author";
-    const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
-    const abstract = fields.abstract ? escapeYAML(fields.abstract) : "No abstract provided.";
-    const zoteroLink = fields.url || "No link provided.";
-
-    // Keywords
-    let keywords = "None";
-    let formattedKeywords = "";
-    if (typeof fields.keywords === "string" && fields.keywords.trim().length > 0) {
-      const keywordArray = fields.keywords.split(",").map((k: string) => k.trim());
-      keywords = keywordArray.join(", ");
-      formattedKeywords = keywordArray
-        .map((k: string) => `#${k.replace(/ /g, "_")}`)
-        .join(" ");
-    }
-
-    // Replacements
-    const replacements: Record<string, string> = {
-      citekey: entry.key || "Unknown",
-      type,
-      title,
-      authors,
-      year: year.toString(),
-      createdDate: new Date().toISOString().split("T")[0],
-      lastModified: fields["date-modified"] || "Unknown",
-      abstract,
-      keywords,
-      formattedKeywords,
-      tags: `${authors} ${formattedKeywords}`,
-      zoteroLink,
-    };
-
-    const templateContent = `---
-citekey: "{{citekey}}"
-type: "{{type}}"
-authors: "{{authors}}"
-createdDate: "{{createdDate}}"
-lastModified: "{{lastModified}}"
-tags: "{{tags}}"
-title: "{{title}}"
-year: "{{year}}"
-keywords: "{{keywords}}"
-zoteroLink: "{{zoteroLink}}"
----
-
-# {{title}}
-
-**Type**: {{type}}  
-**Authors**: {{authors}}  
-**Year**: {{year}}  
-
-**Keywords**: {{formattedKeywords}}
-
-**Abstract**:  
-{{abstract}}
-
-**Zotero Link**: [View in Zotero]({{zoteroLink}})
-`;
-
-    return templateContent.replace(/{{(.*?)}}/g, (_, key) => replacements[key.trim()] || `{{${key}}}`);
-  }
-
-  // =============================== //
-  // Function: Generate File Name    //
-  // =============================== //
-  generateFileName(entry: any): string {
-    const authors = this.extractAuthorTags(entry.fields.author).replace(/#/g, "").split(" ")[0];
-    const year = entry.fields.year || "UnknownYear";
-    const title = entry.fields.title?.split(" ").slice(0, 5).join("_") || "Untitled";
-    return `LN_${authors}_${year}_${title}.md`;
-  }
-
-  // =============================== //
-  // Function: Save Markdown File    //
-  // =============================== //
-  async saveMarkdownFile(fileName: string, content: string) {
-    const targetPath = `LN Literature Notes/${fileName}`;
-    await this.app.vault.create(targetPath, content);
-    console.log(`File saved: ${targetPath}`);
-  }
-
-  // ============================ //
-  // Function: Extract Author Tags //
-  // ============================ //
-  extractAuthorTags(authors: any): string {
-    if (Array.isArray(authors)) {
-      return authors
-        .map((author: any) => {
-          const name = typeof author === "string" ? author : author.literal || "Unknown_Author";
-          return `#${name.split(",")[0]?.trim().replace(/ /g, "_")}`;
-        })
-        .join(" ");
-    } else if (typeof authors === "string" && authors.trim().length > 0) {
-      return authors
-        .replace(/[{}]/g, "")
-        .split(" and ")
-        .map((name) => `#${name.split(",")[0]?.trim().replace(/ /g, "_")}`)
-        .join(" ");
-    }
-    return "#Unknown_Author";
-  }
-
-  // ========================== //
-  // Load and Save Settings     //
-  // ========================== //
-  async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  }
-
-  async saveSettings() {
-    await this.saveData(this.settings);
+  // Plugin cleanup (optional, for when the plugin is disabled)
+  onunload() {
+    console.log("BibLaTeX Plugin unloaded.");
   }
 }
 
-// ============================= //
-// Settings Tab                  //
-// ============================= //
-class BibLaTeXSettingTab extends PluginSettingTab {
+// Create a settings tab for user configuration
+class BibLaTeXPluginSettingTab extends PluginSettingTab {
   plugin: BibLaTeXPlugin;
 
   constructor(app: App, plugin: BibLaTeXPlugin) {
@@ -218,34 +179,27 @@ class BibLaTeXSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
+  // Display settings in the Obsidian settings panel
   display(): void {
     const { containerEl } = this;
+
+    // Clear previous content in the settings panel
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "BibLaTeX to Markdown Settings" });
+    // Create header for settings
+    containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
 
+    // Add setting for template path
     new Setting(containerEl)
       .setName("Template Path")
-      .setDesc("Path to your Obsidian template file")
+      .setDesc("Path to the template file for Markdown notes.")
       .addText((text) =>
         text
-          .setPlaceholder("templates/biblatex_template.md")
+          .setPlaceholder("Enter template path")
           .setValue(this.plugin.settings.templatePath)
           .onChange(async (value) => {
+            console.log("Template Path: " + value);
             this.plugin.settings.templatePath = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Entry Limit")
-      .setDesc("Maximum number of BibTeX entries to process at once")
-      .addSlider((slider) =>
-        slider
-          .setLimits(1, 100, 1)
-          .setValue(this.plugin.settings.entryLimit)
-          .onChange(async (value) => {
-            this.plugin.settings.entryLimit = value;
             await this.plugin.saveSettings();
           })
       );
