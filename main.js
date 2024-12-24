@@ -28879,7 +28879,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           }
           const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
           const sanitizedAuthors = authors.replace(/[\/\\:*?"<>|]/g, "_");
-          const fileName = `LN ${sanitizedAuthors} ${year} ${sanitizedTitle}.md`;
+          const fileName = `NLN ${sanitizedAuthors} ${year} ${sanitizedTitle}.md`;
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
           console.log(`Created Markdown file: ${folderPath}/${fileName}`);
         }
