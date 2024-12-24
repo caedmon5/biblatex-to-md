@@ -28760,6 +28760,7 @@ var DEFAULT_SETTINGS = {
   // Default template path
 };
 var BibLaTeXPlugin = class extends import_obsidian.Plugin {
+  // Plugin initialization and setup
   async onload() {
     console.log("BibLaTeX Plugin loaded.");
     await this.loadSettings();
@@ -28800,7 +28801,9 @@ var BibLaTeXPlugin = class extends import_obsidian.Plugin {
       try {
         const content = await this.app.vault.read(file);
         console.log(`Processing file: ${file.path}`);
-        console.log("File content:", content);
+        if (this.settings.debugMode) {
+          console.log("File content:", content);
+        }
         const parsedResult = BibtexParser.parse(content);
         const parsedEntries = parsedResult.entries;
         console.log("Parsed entries:", parsedEntries);
@@ -28862,6 +28865,7 @@ var BibLaTeXPlugin = class extends import_obsidian.Plugin {
     }
     new import_obsidian.Notice("BibTeX entries imported successfully!");
   }
+  // Plugin cleanup (optional, for when the plugin is disabled)
   onunload() {
     console.log("BibLaTeX Plugin unloaded.");
   }
@@ -28871,12 +28875,14 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
     super(app, plugin);
     this.plugin = plugin;
   }
+  // Display settings in the Obsidian settings panel
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "BibLaTeX Plugin Settings" });
-    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Path to the template file used for generating Markdown notes.").addText(
-      (text) => text.setPlaceholder("templates/bibtex-template.md").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
+    containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
+    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Path to the template file for Markdown notes.").addText(
+      (text) => text.setPlaceholder("Enter template path").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
+        console.log("Template Path: " + value);
         this.plugin.settings.templatePath = value;
         await this.plugin.saveSettings();
       })
