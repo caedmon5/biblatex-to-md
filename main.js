@@ -28763,13 +28763,42 @@ __export(main_exports, {
   default: () => BibLaTeXPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian = require("obsidian");
+var import_obsidian2 = require("obsidian");
 var bibtexParser = __toESM(require_bibtex_parser());
+
+// settings.ts
+var import_obsidian = require("obsidian");
 var DEFAULT_SETTINGS = {
   templatePath: "templates/biblatex_template.md",
   entryLimit: 5
 };
-var BibLaTeXPlugin = class extends import_obsidian.Plugin {
+var BibLaTeXSettingTab = class extends import_obsidian.PluginSettingTab {
+  // Or better: plugin: BibLaTeXPlugin if you wish
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    containerEl.createEl("h2", { text: "BibLaTeX to Markdown Settings" });
+    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Path to your Obsidian template file").addText(
+      (text) => text.setPlaceholder("templates/biblatex_template.md").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
+        this.plugin.settings.templatePath = value;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Maximum number of BibTeX entries to process at once").addSlider(
+      (slider) => slider.setLimits(1, 100, 1).setValue(this.plugin.settings.entryLimit).onChange(async (value) => {
+        this.plugin.settings.entryLimit = value;
+        await this.plugin.saveSettings();
+      })
+    );
+  }
+};
+
+// main.ts
+var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
   async onload() {
     console.log("Loading BibLaTeX to Markdown Plugin...");
     await this.loadSettings();
@@ -28781,12 +28810,12 @@ var BibLaTeXPlugin = class extends import_obsidian.Plugin {
     this.addSettingTab(new BibLaTeXSettingTab(this.app, this));
   }
   // =========================== //
-  // Function: Import BibTeX File //
+  // Function: Import BibTeX File
   // =========================== //
   async importBibTeX() {
     const files = this.app.vault.getFiles().filter((file) => file.extension === "bib");
     if (files.length === 0) {
-      new import_obsidian.Notice("No BibTeX files found in your vault.");
+      new import_obsidian2.Notice("No BibTeX files found in your vault.");
       return;
     }
     for (const file of files.slice(0, this.settings.entryLimit)) {
@@ -28798,7 +28827,7 @@ var BibLaTeXPlugin = class extends import_obsidian.Plugin {
         await this.saveMarkdownFile(fileName, markdown);
       }
     }
-    new import_obsidian.Notice("BibTeX entries imported successfully!");
+    new import_obsidian2.Notice("BibTeX entries imported successfully!");
   }
   // =============================== //
   // Function: Generate Markdown     //
@@ -28875,7 +28904,10 @@ zoteroLink: "{{zoteroLink}}"
 
 **Zotero Link**: [View in Zotero]({{zoteroLink}})
 `;
-    return templateContent.replace(/{{(.*?)}}/g, (_, key) => replacements[key.trim()] || `{{${key}}}`);
+    return templateContent.replace(
+      /{{(.*?)}}/g,
+      (_, key) => replacements[key.trim()] || `{{${key}}}`
+    );
   }
   // =============================== //
   // Function: Generate File Name    //
@@ -28916,28 +28948,5 @@ zoteroLink: "{{zoteroLink}}"
   }
   async saveSettings() {
     await this.saveData(this.settings);
-  }
-};
-var BibLaTeXSettingTab = class extends import_obsidian.PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    containerEl.createEl("h2", { text: "BibLaTeX to Markdown Settings" });
-    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Path to your Obsidian template file").addText(
-      (text) => text.setPlaceholder("templates/biblatex_template.md").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
-        this.plugin.settings.templatePath = value;
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Maximum number of BibTeX entries to process at once").addSlider(
-      (slider) => slider.setLimits(1, 100, 1).setValue(this.plugin.settings.entryLimit).onChange(async (value) => {
-        this.plugin.settings.entryLimit = value;
-        await this.plugin.saveSettings();
-      })
-    );
   }
 };

@@ -1,21 +1,12 @@
-import { App, Notice, Plugin, PluginSettingTab, Setting, TFile } from "obsidian";
+import { App, Notice, Plugin, TFile } from "obsidian";
 import * as bibtexParser from "@retorquere/bibtex-parser";
 
-// ====================== //
-// Plugin Settings Object //
-// ====================== //
-interface BibLaTeXPluginSettings {
-  templatePath: string;
-  entryLimit: number;
-}
-
-// ========================== //
-// Default Settings           //
-// ========================== //
-const DEFAULT_SETTINGS: BibLaTeXPluginSettings = {
-  templatePath: "templates/biblatex_template.md",
-  entryLimit: 5,
-};
+// Import settings-related code from our new file
+import {
+  BibLaTeXPluginSettings,
+  DEFAULT_SETTINGS,
+  BibLaTeXSettingTab,
+} from "./settings";
 
 // ========================== //
 // Main Plugin Class          //
@@ -41,10 +32,12 @@ export default class BibLaTeXPlugin extends Plugin {
   }
 
   // =========================== //
-  // Function: Import BibTeX File //
+  // Function: Import BibTeX File
   // =========================== //
   async importBibTeX() {
-    const files = this.app.vault.getFiles().filter((file) => file.extension === "bib");
+    const files = this.app.vault
+      .getFiles()
+      .filter((file) => file.extension === "bib");
 
     if (files.length === 0) {
       new Notice("No BibTeX files found in your vault.");
@@ -58,7 +51,6 @@ export default class BibLaTeXPlugin extends Plugin {
       for (const entry of parsedData.entries) {
         const markdown = this.generateMarkdownFromEntry(entry);
         const fileName = this.generateFileName(entry);
-
         await this.saveMarkdownFile(fileName, markdown);
       }
     }
@@ -152,14 +144,19 @@ zoteroLink: "{{zoteroLink}}"
 **Zotero Link**: [View in Zotero]({{zoteroLink}})
 `;
 
-    return templateContent.replace(/{{(.*?)}}/g, (_, key) => replacements[key.trim()] || `{{${key}}}`);
+    return templateContent.replace(
+      /{{(.*?)}}/g,
+      (_, key) => replacements[key.trim()] || `{{${key}}}`
+    );
   }
 
   // =============================== //
   // Function: Generate File Name    //
   // =============================== //
   generateFileName(entry: any): string {
-    const authors = this.extractAuthorTags(entry.fields.author).replace(/#/g, "").split(" ")[0];
+    const authors = this.extractAuthorTags(entry.fields.author)
+      .replace(/#/g, "")
+      .split(" ")[0];
     const year = entry.fields.year || "UnknownYear";
     const title = entry.fields.title?.split(" ").slice(0, 5).join("_") || "Untitled";
     return `LN_${authors}_${year}_${title}.md`;
@@ -204,50 +201,5 @@ zoteroLink: "{{zoteroLink}}"
 
   async saveSettings() {
     await this.saveData(this.settings);
-  }
-}
-
-// ============================= //
-// Settings Tab                  //
-// ============================= //
-class BibLaTeXSettingTab extends PluginSettingTab {
-  plugin: BibLaTeXPlugin;
-
-  constructor(app: App, plugin: BibLaTeXPlugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-
-  display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-
-    containerEl.createEl("h2", { text: "BibLaTeX to Markdown Settings" });
-
-    new Setting(containerEl)
-      .setName("Template Path")
-      .setDesc("Path to your Obsidian template file")
-      .addText((text) =>
-        text
-          .setPlaceholder("templates/biblatex_template.md")
-          .setValue(this.plugin.settings.templatePath)
-          .onChange(async (value) => {
-            this.plugin.settings.templatePath = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Entry Limit")
-      .setDesc("Maximum number of BibTeX entries to process at once")
-      .addSlider((slider) =>
-        slider
-          .setLimits(1, 100, 1)
-          .setValue(this.plugin.settings.entryLimit)
-          .onChange(async (value) => {
-            this.plugin.settings.entryLimit = value;
-            await this.plugin.saveSettings();
-          })
-      );
   }
 }
