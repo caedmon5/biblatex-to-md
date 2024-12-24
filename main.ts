@@ -85,45 +85,50 @@ async importBibTeX() {
         const fields = entry.fields || {};
         const title = fields.title || "Untitled";
 
-        // --- 1) Get a more complete author string ---
-        let authorsRaw = fields.author || "Unknown Author";
-        let authorsFinal = "";
+// --- 1) Get authors in "LastName, FirstName; LastName, FirstName" format ---
+let authorsRaw = fields.author || "Unknown Author";
+let authorsFinal = "";
 
-        if (typeof authorsRaw === "string") {
-          // If it's a single string with commas, try to reorder "Last, First" → "First Last"
-          // Or you can simply keep it as-is if you prefer
-          const cleaned = authorsRaw.replace(/[{}]/g, "");
-          // Some BibTeX items use "and" to separate multiple authors
-          const authorSplits = cleaned.split(/\s+and\s+/i);
+if (typeof authorsRaw === "string") {
+  // Remove braces and split on " and " to handle multiple authors.
+  const cleaned = authorsRaw.replace(/[{}]/g, "");
+  const authorSplits = cleaned.split(/\s+and\s+/i);
 
-          // For each "Last, First" -> "First Last"
-          const processed = authorSplits.map((authorStr) => {
-            const [lastName, firstName] = authorStr.split(",");
-            if (firstName && lastName) {
-              return `${firstName.trim()} ${lastName.trim()}`;
-            }
-            return authorStr.trim();
-          });
-
-          authorsFinal = processed.join(", ");
-        } else if (Array.isArray(authorsRaw)) {
-          // If it's an array of objects from the parser
-          // e.g. [{ firstName: "John", lastName: "Smith" }, ...]
-          authorsFinal = authorsRaw
-            .map((a) => {
-              const fn = a.firstName || "";
-              const ln = a.lastName || "";
-              return fn && ln ? `${fn} ${ln}` : (ln || fn || "Unknown");
-            })
-            .join(", ");
-        } else if (typeof authorsRaw === "object") {
-          // If there's a single object
-          const fn = authorsRaw.firstName || "";
-          const ln = authorsRaw.lastName || "";
-          authorsFinal = fn && ln ? `${fn} ${ln}` : (ln || fn || "Unknown");
-        } else {
-          authorsFinal = String(authorsRaw); 
-        }
+  // Each author might already be "Last, First" or "First Last".
+  // We'll attempt to parse and output "LastName, FirstName".
+  const processed = authorSplits.map((authorStr) => {
+    // Check if there's a comma that likely separates last/first
+    if (authorStr.includes(",")) {
+      // e.g. "Christakis, Nicholas A." → keep as is, but trim
+      return authorStr.trim();
+    } else {
+      // e.g. "Nicholas A. Christakis"
+      const parts = authorStr.trim().split(/\s+/);
+      // The last part is likely the last name
+      const lastName = parts.pop();
+      const firstNames = parts.join(" ");
+      return `${lastName}, ${firstNames}`.trim();
+    }
+  });
+  authorsFinal = processed.join("; ");
+} else if (Array.isArray(authorsRaw)) {
+  // If it's an array of objects from the parser
+  // e.g. [{ firstName: "John", lastName: "Smith" }, ...]
+  authorsFinal = authorsRaw
+    .map((a) => {
+      const fn = a.firstName?.trim() || "";
+      const ln = a.lastName?.trim() || "";
+      return (ln && fn) ? `${ln}, ${fn}` : (ln || fn || "Unknown");
+    })
+    .join("; ");
+} else if (typeof authorsRaw === "object") {
+  // If there's a single object
+  const fn = authorsRaw.firstName?.trim() || "";
+  const ln = authorsRaw.lastName?.trim() || "";
+  authorsFinal = (ln && fn) ? `${ln}, ${fn}` : (ln || fn || "Unknown");
+} else {
+  authorsFinal = String(authorsRaw); 
+}
 
         // --- 2) Derive other fields ---
         const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";

@@ -28841,41 +28841,77 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
         const parsedResult = BibtexParser.parse(content);
         const parsedEntries = parsedResult.entries;
         console.log("Parsed entries:", parsedEntries);
-        for (const entry of parsedEntries) {
+        for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
           console.log("Parsed entry:", entry);
           const fields = entry.fields || {};
           const title = fields.title || "Untitled";
-          let authors = fields.author || "Unknown Author";
-          if (typeof authors === "string") {
-            const authorParts = authors.replace(/[{}]/g, "").split(",");
-            authors = authorParts[0]?.trim() || "Unknown Author";
-          } else if (Array.isArray(authors)) {
-            authors = authors.map((a) => a.lastName || "Unknown").join(", ");
-          } else if (typeof authors === "object" && authors.lastName) {
-            authors = authors.lastName;
+          let authorsRaw = fields.author || "Unknown Author";
+          let authorsFinal = "";
+          if (typeof authorsRaw === "string") {
+            const cleaned = authorsRaw.replace(/[{}]/g, "");
+            const authorSplits = cleaned.split(/\s+and\s+/i);
+            const processed = authorSplits.map((authorStr) => {
+              if (authorStr.includes(",")) {
+                return authorStr.trim();
+              } else {
+                const parts = authorStr.trim().split(/\s+/);
+                const lastName = parts.pop();
+                const firstNames = parts.join(" ");
+                return `${lastName}, ${firstNames}`.trim();
+              }
+            });
+            authorsFinal = processed.join("; ");
+          } else if (Array.isArray(authorsRaw)) {
+            authorsFinal = authorsRaw.map((a) => {
+              const fn = a.firstName?.trim() || "";
+              const ln = a.lastName?.trim() || "";
+              return ln && fn ? `${ln}, ${fn}` : ln || fn || "Unknown";
+            }).join("; ");
+          } else if (typeof authorsRaw === "object") {
+            const fn = authorsRaw.firstName?.trim() || "";
+            const ln = authorsRaw.lastName?.trim() || "";
+            authorsFinal = ln && fn ? `${ln}, ${fn}` : ln || fn || "Unknown";
           } else {
-            authors = String(authors);
+            authorsFinal = String(authorsRaw);
           }
           const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
           const abstract = fields.abstract || "No abstract provided.";
           const journaltitle = fields.journaltitle || "Unknown Journal";
           const keywords = fields.keywords || "None";
+          let formattedKeywords = "";
+          if (typeof keywords === "string" && keywords.trim()) {
+            const keywordArray = keywords.split(",").map((k) => k.trim());
+            formattedKeywords = keywordArray.map((k) => `#${k.replace(/\s+/g, "_")}`).join(" ");
+          }
+          let tags = `${authorsFinal} ${formattedKeywords}`.trim();
+          const createdDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+          const lastModified = fields["date-modified"] || createdDate;
+          const citekey = entry.key || "UnknownKey";
+          const zoteroLink = fields.url || "No link provided";
+          let conditionalFields = "";
+          const replacements = {
+            citekey,
+            createdDate,
+            lastModified,
+            tags,
+            formattedKeywords,
+            zoteroLink,
+            conditionalFields,
+            type: entry.type || "Unknown Type",
+            authors: authorsFinal,
+            title,
+            year,
+            abstract,
+            journaltitle,
+            keywords,
+            publisher: fields.publisher || "Unknown Publisher",
+            volume: fields.volume || "N/A",
+            issue: fields.issue || "N/A",
+            pages: fields.pages || "N/A",
+            doi: fields.doi || "N/A",
+            url: fields.url || "No URL provided"
+          };
           const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
-            const replacements = {
-              type: entry.type || "Unknown Type",
-              authors,
-              title,
-              year,
-              abstract,
-              journaltitle,
-              keywords,
-              publisher: fields.publisher || "Unknown Publisher",
-              volume: fields.volume || "N/A",
-              issue: fields.issue || "N/A",
-              pages: fields.pages || "N/A",
-              doi: fields.doi || "N/A",
-              url: fields.url || "No URL provided"
-            };
             const value = replacements[key.trim()];
             if (value === void 0) {
               console.warn(`Warning: No replacement found for placeholder "{{${key}}}".`);
@@ -28888,8 +28924,8 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             await this.app.vault.createFolder(folderPath);
           }
           const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
-          const sanitizedAuthors = authors.replace(/[\/\\:*?"<>|]/g, "_");
-          const fileName = `NLN ${sanitizedAuthors} ${year} ${sanitizedTitle}.md`;
+          const sanitizedAuthors = authorsFinal.replace(/[\/\\:*?"<>|]/g, "_");
+          const fileName = `LNL ${sanitizedAuthors} ${year} ${sanitizedTitle}.md`;
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
           console.log(`Created Markdown file: ${folderPath}/${fileName}`);
         }
