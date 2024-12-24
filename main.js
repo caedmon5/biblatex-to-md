@@ -28758,12 +28758,12 @@ var import_obsidian2 = require("obsidian");
 // settings.ts
 var import_obsidian = require("obsidian");
 var DEFAULT_SETTINGS = {
-  templatePath: "templates/bibtex-template.md"
-  // Optional: If you plan to use debugMode:
-  //   debugMode: false,
+  templatePath: "templates/bibtex-template.md",
+  entryLimit: 5
+  // Default is 5
 };
 var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
-  // If you'd like, replace 'any' with the specific plugin type
+  // Ideally, replace 'any' with the specific plugin type (BibLaTeXPlugin)
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -28778,6 +28778,16 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
         console.log("Template Path: " + value);
         this.plugin.settings.templatePath = value;
         await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Maximum number of entries to process from each BibTeX file (1 or more).").addText(
+      (text) => text.setPlaceholder("e.g., 5 or 10000").setValue(String(this.plugin.settings.entryLimit)).onChange(async (value) => {
+        console.log("Entry Limit (raw):", value);
+        const parsedValue = parseInt(value, 10);
+        if (!isNaN(parsedValue) && parsedValue > 0) {
+          this.plugin.settings.entryLimit = parsedValue;
+          await this.plugin.saveSettings();
+        }
       })
     );
   }

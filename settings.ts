@@ -3,19 +3,17 @@ import { PluginSettingTab, Setting, App } from "obsidian";
 // Define plugin settings and their defaults
 export interface BibLaTeXPluginSettings {
   templatePath: string;
-  // Optional: If you plan to use debugMode, uncomment/add the following:
-//   debugMode: boolean;
+  entryLimit: number; // New setting
 }
 
 export const DEFAULT_SETTINGS: BibLaTeXPluginSettings = {
   templatePath: "templates/bibtex-template.md",
-  // Optional: If you plan to use debugMode:
-//   debugMode: false,
+  entryLimit: 5, // Default is 5
 };
 
 // Create a settings tab for user configuration
 export class BibLaTeXPluginSettingTab extends PluginSettingTab {
-  plugin: any; // If you'd like, replace 'any' with the specific plugin type
+  plugin: any; // Ideally, replace 'any' with the specific plugin type (BibLaTeXPlugin)
 
   constructor(app: App, plugin: any) {
     super(app, plugin);
@@ -47,17 +45,22 @@ export class BibLaTeXPluginSettingTab extends PluginSettingTab {
           })
       );
 
-    // Optional: If you want a debugMode setting
-    // new Setting(containerEl)
-    //   .setName("Debug Mode")
-    //   .setDesc("Enable debug logging in the console.")
-    //   .addToggle((toggle) => {
-    //     toggle
-    //       .setValue(this.plugin.settings.debugMode)
-    //       .onChange(async (value) => {
-    //         this.plugin.settings.debugMode = value;
-    //         await this.plugin.saveSettings();
-    //       });
-    //   });
+    // Add entry limit setting (text input instead of slider)
+    new Setting(containerEl)
+      .setName("Entry Limit")
+      .setDesc("Maximum number of entries to process from each BibTeX file (1 or more).")
+      .addText((text) =>
+        text
+          .setPlaceholder("e.g., 5 or 10000")
+          .setValue(String(this.plugin.settings.entryLimit))
+          .onChange(async (value) => {
+            console.log("Entry Limit (raw):", value);
+            const parsedValue = parseInt(value, 10);
+            if (!isNaN(parsedValue) && parsedValue > 0) {
+              this.plugin.settings.entryLimit = parsedValue;
+              await this.plugin.saveSettings();
+            }
+          })
+      );
   }
 }
