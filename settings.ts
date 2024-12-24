@@ -1,62 +1,63 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { PluginSettingTab, Setting, App } from "obsidian";
 
-// ====================== //
-// Plugin Settings Object //
-// ====================== //
+// Define plugin settings and their defaults
 export interface BibLaTeXPluginSettings {
   templatePath: string;
-  entryLimit: number;
+  // Optional: If you plan to use debugMode, uncomment/add the following:
+//   debugMode: boolean;
 }
 
-// ========================== //
-// Default Settings           //
-// ========================== //
 export const DEFAULT_SETTINGS: BibLaTeXPluginSettings = {
-  templatePath: "templates/biblatex_template.md",
-  entryLimit: 5,
+  templatePath: "templates/bibtex-template.md",
+  // Optional: If you plan to use debugMode:
+//   debugMode: false,
 };
 
-// ============================= //
-// Settings Tab                  //
-// ============================= //
-export class BibLaTeXSettingTab extends PluginSettingTab {
-  plugin: any; // Or better: plugin: BibLaTeXPlugin if you wish
+// Create a settings tab for user configuration
+export class BibLaTeXPluginSettingTab extends PluginSettingTab {
+  plugin: any; // If you'd like, replace 'any' with the specific plugin type
 
   constructor(app: App, plugin: any) {
     super(app, plugin);
     this.plugin = plugin;
   }
 
+  // Display settings in the Obsidian settings panel
   display(): void {
     const { containerEl } = this;
+
+    // Clear previous content in the settings panel
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "BibLaTeX to Markdown Settings" });
+    // Create header for settings
+    containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
 
+    // Add setting for template path
     new Setting(containerEl)
       .setName("Template Path")
-      .setDesc("Path to your Obsidian template file")
+      .setDesc("Path to the template file for Markdown notes.")
       .addText((text) =>
         text
-          .setPlaceholder("templates/biblatex_template.md")
+          .setPlaceholder("Enter template path")
           .setValue(this.plugin.settings.templatePath)
           .onChange(async (value) => {
+            console.log("Template Path: " + value);
             this.plugin.settings.templatePath = value;
             await this.plugin.saveSettings();
           })
       );
 
-    new Setting(containerEl)
-      .setName("Entry Limit")
-      .setDesc("Maximum number of BibTeX entries to process at once")
-      .addSlider((slider) =>
-        slider
-          .setLimits(1, 100, 1)
-          .setValue(this.plugin.settings.entryLimit)
-          .onChange(async (value) => {
-            this.plugin.settings.entryLimit = value;
-            await this.plugin.saveSettings();
-          })
-      );
+    // Optional: If you want a debugMode setting
+    // new Setting(containerEl)
+    //   .setName("Debug Mode")
+    //   .setDesc("Enable debug logging in the console.")
+    //   .addToggle((toggle) => {
+    //     toggle
+    //       .setValue(this.plugin.settings.debugMode)
+    //       .onChange(async (value) => {
+    //         this.plugin.settings.debugMode = value;
+    //         await this.plugin.saveSettings();
+    //       });
+    //   });
   }
 }
