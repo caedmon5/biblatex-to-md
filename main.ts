@@ -153,14 +153,21 @@ zoteroLink: "{{zoteroLink}}"
   // =============================== //
   // Function: Generate File Name    //
   // =============================== //
-  generateFileName(entry: any): string {
-    const authors = this.extractAuthorTags(entry.fields.author)
-      .replace(/#/g, "")
-      .split(" ")[0];
-    const year = entry.fields.year || "UnknownYear";
-    const title = entry.fields.title?.split(" ").slice(0, 5).join("_") || "Untitled";
-    return `LN_${authors}_${year}_${title}.md`;
-  }
+
+generateFileName(entry: any): string {
+  const authors = this.extractAuthorTags(entry.fields.author)
+    .replace(/#/g, "")
+    .split(" ")[0];
+  const year = entry.fields.year || "UnknownYear";
+  const title = entry.fields.title?.split(" ").slice(0, 5).join("_") || "Untitled";
+
+  // Add a step to remove disallowed characters
+  const safeAuthors = authors.replace(/[\\\/:*?"<>|]/g, "_");
+  const safeYear = year.replace(/[\\\/:*?"<>|]/g, "_");
+  const safeTitle = title.replace(/[\\\/:*?"<>|]/g, "_");
+
+  return `LN_${safeAuthors}_${safeYear}_${safeTitle}.md`;
+}
 
   // =============================== //
   // Function: Save Markdown File    //
