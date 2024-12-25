@@ -45,6 +45,18 @@ export default class BibLaTeXPlugin extends Plugin {
   }
 
 /**
+ * Helper function to sanitize strings
+ * Removes invalid characters for filenames or other uses.
+ * @param {string} input - The string to sanitize.
+ * @returns {string} Sanitized string.
+ */
+sanitizeString(input: string): string {
+    return input.replace(/[\/\\:*?"<>|]/g, "_").trim();
+}
+
+
+
+/**
  * Helper function to process author names
  * @param {Array|Object|string} authorsRaw - Raw authors data
  * @returns {Object} Object with formatted tags and filenames
@@ -236,7 +248,7 @@ const { authorTags, fileNameAuthor } = this.processAuthors(authorsRaw);
 
         // Use first author tag (minus '#') in the file name
 
-const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_");
+const sanitizedTitle = this.sanitizeString(title);
 const fileName = `LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
 
         await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);

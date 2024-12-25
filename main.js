@@ -28817,6 +28817,15 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     await this.saveData(this.settings);
   }
   /**
+   * Helper function to sanitize strings
+   * Removes invalid characters for filenames or other uses.
+   * @param {string} input - The string to sanitize.
+   * @returns {string} Sanitized string.
+   */
+  sanitizeString(input) {
+    return input.replace(/[\/\\:*?"<>|]/g, "_").trim();
+  }
+  /**
    * Helper function to process author names
    * @param {Array|Object|string} authorsRaw - Raw authors data
    * @returns {Object} Object with formatted tags and filenames
@@ -28955,7 +28964,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           if (!this.app.vault.getAbstractFileByPath(folderPath)) {
             await this.app.vault.createFolder(folderPath);
           }
-          const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_");
+          const sanitizedTitle = this.sanitizeString(title);
           const fileName = `LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
           console.log(`Created Markdown file: ${folderPath}/${fileName}`);
