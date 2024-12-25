@@ -1,7 +1,9 @@
 "use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -18,6 +20,14 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // node_modules/@unified-latex/unified-latex-util-print-raw/index.cjs
@@ -28753,18 +28763,20 @@ __export(main_exports, {
   default: () => BibLaTeXPlugin
 });
 module.exports = __toCommonJS(main_exports);
+var path = __toESM(require("path"));
 var import_obsidian2 = require("obsidian");
 
 // settings.ts
 var import_obsidian = require("obsidian");
 var DEFAULT_SETTINGS = {
-  templatePath: "templates/bibtex-template.md",
+  templatePath: "/",
+  // default is to the root directory
   entryLimit: 5,
   // Default is 5
   filePrefix: "",
   // Default to no prefix
-  fileDirectory: "./"
-  // Default to current directory
+  fileDirectory: "/"
+  // Default to the root directory
 };
 var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
   // Ideally, replace 'any' with the specific plugin type (BibLaTeXPlugin)
@@ -28800,12 +28812,17 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("File Directory").setDesc("Specify the directory for file creation (default is current).").addText(
-      (text) => text.setPlaceholder("e.g., /my/notes").setValue(this.plugin.settings.fileDirectory).onChange(async (value) => {
+    new import_obsidian.Setting(containerEl).setName("File Directory").setDesc("Specify the directory for file creation (default is current).").addDropdown((dropdown) => {
+      const vaultPath = this.app.vault.adapter.basePath;
+      const folders = this.app.vault.getAllLoadedFiles().filter((f) => f.children).map((folder) => folder.path);
+      dropdown.addOption("/", "Vault Root");
+      folders.forEach((folder) => dropdown.addOption(folder, folder));
+      dropdown.setValue(this.plugin.settings.fileDirectory);
+      dropdown.onChange(async (value) => {
         this.plugin.settings.fileDirectory = value;
         await this.plugin.saveSettings();
-      })
-    );
+      });
+    });
   }
 };
 
@@ -28984,8 +29001,10 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             title.split(/\s+/).slice(0, 4).join(" ")
           );
           const filePrefix = this.settings.filePrefix ? `${this.settings.filePrefix} ` : "";
-          const fileDirectory = this.settings.fileDirectory.endsWith("/") ? this.settings.fileDirectory : `${this.settings.fileDirectory}/`;
-          const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
+          const vaultPath = this.app.vault.adapter.basePath;
+          const resolvedDirectory = this.settings.fileDirectory === "/" ? vaultPath : path.join(vaultPath, this.settings.fileDirectory);
+          const fileDirectory = resolvedDirectory.endsWith("/") ? resolvedDirectory : `${resolvedDirectory}/`;
+          const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
           console.log(`Created Markdown file: ${folderPath}/${fileName}`);
         }

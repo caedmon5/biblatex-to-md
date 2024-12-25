@@ -9,10 +9,10 @@ export interface BibLaTeXPluginSettings {
 }
 
 export const DEFAULT_SETTINGS: BibLaTeXPluginSettings = {
-  templatePath: "templates/bibtex-template.md",
+  templatePath: "/", // default is to the root directory
   entryLimit: 5, // Default is 5
     filePrefix: "",     // Default to no prefix
-    fileDirectory: "./", // Default to current directory
+    fileDirectory: "/", // Default to the root directory
 };
 
 // Create a settings tab for user configuration
@@ -86,15 +86,22 @@ new Setting(containerEl)
 new Setting(containerEl)
     .setName("File Directory")
     .setDesc("Specify the directory for file creation (default is current).")
-    .addText((text) =>
-        text
-            .setPlaceholder("e.g., /my/notes")
-            .setValue(this.plugin.settings.fileDirectory)
-            .onChange(async (value) => {
-                this.plugin.settings.fileDirectory = value;
-                await this.plugin.saveSettings();
-            })
-    );
+.addDropdown((dropdown) => {
+        // Populate dropdown with existing subdirectories
+        const vaultPath = this.app.vault.adapter.basePath; // Get vault root
+        const folders = this.app.vault.getAllLoadedFiles()
+            .filter((f) => f.children) // Only directories
+            .map((folder) => folder.path);
+
+        dropdown.addOption("/", "Vault Root"); // Add default option
+        folders.forEach((folder) => dropdown.addOption(folder, folder));
+
+        dropdown.setValue(this.plugin.settings.fileDirectory);
+        dropdown.onChange(async (value) => {
+            this.plugin.settings.fileDirectory = value;
+            await this.plugin.saveSettings();
+        });
+    });
 
   }
 }

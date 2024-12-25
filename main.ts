@@ -1,4 +1,5 @@
 // Import necessary Obsidian classes and external modules
+import * as path from "path";
 import { Plugin, Notice } from "obsidian";
 const BibtexParser = require("@retorquere/bibtex-parser");
 
@@ -256,13 +257,21 @@ const truncatedTitle = this.sanitizeString(
 // Add prefix if defined
 const filePrefix = this.settings.filePrefix ? `${this.settings.filePrefix} ` : "";
 
+// Get the Obsidian vault path
+const vaultPath = this.app.vault.adapter.basePath; // Get the Obsidian root directory
+
+// Resolve the directory path
+const resolvedDirectory = this.settings.fileDirectory === "/"
+    ? vaultPath
+    : path.join(vaultPath, this.settings.fileDirectory);
+
 // Ensure directory ends with a slash
-const fileDirectory = this.settings.fileDirectory.endsWith("/")
-    ? this.settings.fileDirectory
-    : `${this.settings.fileDirectory}/`;
+const fileDirectory = resolvedDirectory.endsWith("/")
+    ? resolvedDirectory
+    : `${resolvedDirectory}/`;
 
 // Construct the full file path
-const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
+const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
 
         await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
         console.log(`Created Markdown file: ${folderPath}/${fileName}`);
