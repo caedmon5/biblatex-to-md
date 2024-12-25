@@ -18241,7 +18241,7 @@ var require_yield = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.playnice = playnice;
     async function playnice() {
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve2) => setTimeout(resolve2, 0));
     }
   }
 });
@@ -28763,6 +28763,7 @@ __export(main_exports, {
   default: () => BibLaTeXPlugin
 });
 module.exports = __toCommonJS(main_exports);
+var path2 = __toESM(require("path"));
 var import_obsidian2 = require("obsidian");
 
 // settings.ts
@@ -28929,6 +28930,16 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     if (files.length === 0) {
       new import_obsidian2.Notice("No BibTeX files found in your vault.");
       return;
+    }
+    const vaultPath = this.app.vault.adapter.basePath;
+    const resolvedDirectory = path2.resolve(
+      vaultPath,
+      path2.relative(vaultPath, this.settings.fileDirectory)
+      // Ensure relative to vault root
+    );
+    const fileDirectory = resolvedDirectory.endsWith("/") ? resolvedDirectory : `${resolvedDirectory}/`;
+    if (!this.app.vault.getAbstractFileByPath(fileDirectory)) {
+      await this.app.vault.createFolder(fileDirectory);
     }
     const coreTemplatesSettings = this.app.internalPlugins.plugins["templates"]?.instance?.options;
     const coreTemplateFolder = coreTemplatesSettings?.folder;

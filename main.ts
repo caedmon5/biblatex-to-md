@@ -106,6 +106,26 @@ async importBibTeX() {
     return;
   }
 
+// Resolve the directory path for file creation
+  const vaultPath = this.app.vault.adapter.basePath; // Get the Obsidian root directory
+  const resolvedDirectory = path.resolve(
+      vaultPath,
+      path.relative(vaultPath, this.settings.fileDirectory) // Ensure relative to vault root
+  );
+
+  // Ensure directory ends with a slash
+  const fileDirectory = resolvedDirectory.endsWith("/")
+      ? resolvedDirectory
+      : `${resolvedDirectory}/`;
+
+  // Ensure the target directory exists once before processing files
+  if (!this.app.vault.getAbstractFileByPath(fileDirectory)) {
+      await this.app.vault.createFolder(fileDirectory);
+  }
+
+  // Template handling logic
+
+
   const coreTemplatesSettings = (this.app as any).internalPlugins.plugins["templates"]?.instance?.options;
   const coreTemplateFolder = coreTemplatesSettings?.folder;
   const templatePath = coreTemplateFolder
