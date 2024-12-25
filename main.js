@@ -18735,8 +18735,8 @@ var require_jabref = __commonJS({
         if (!decoded[tree])
           continue;
         for (const encoded of decoded[tree]) {
-          const fields2 = decode(encoded);
-          const level_type_name = decode(fields2.shift(), ":");
+          const fields = decode(encoded);
+          const level_type_name = decode(fields.shift(), ":");
           const m = /^([0-9]+) (.+)/.exec(level_type_name[0]);
           if (!m)
             break;
@@ -18745,8 +18745,8 @@ var require_jabref = __commonJS({
           if (type === "AllEntriesGroup")
             continue;
           const name = level_type_name[1];
-          const intersection = decode(fields2.shift())[0];
-          const keys = tree === "grouping" ? [] : fields2.map((field) => decode(field)[0]);
+          const intersection = decode(fields.shift())[0];
+          const keys = tree === "grouping" ? [] : fields.map((field) => decode(field)[0]);
           const group = {
             name,
             entries: keys,
@@ -28303,8 +28303,8 @@ var require_bibtex_parser = __commonJS({
         if (this.options.verbatimFields && this.options.verbatimFields.find((name) => typeof name === "string" ? name === field : field.match(name)))
           return "verbatim";
         let mode = "literal";
-        for (const [selected, fields2] of Object.entries(this.fieldMode)) {
-          if (fields2.find((match) => typeof match === "string" ? field === match : field.match(match)))
+        for (const [selected, fields] of Object.entries(this.fieldMode)) {
+          if (fields.find((match) => typeof match === "string" ? field === match : field.match(match)))
             mode = selected;
         }
         return mode;
@@ -28949,6 +28949,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
         const parsedEntries = parsedResult.entries;
         console.log("Parsed entries:", parsedEntries);
         for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
+          const fields = entry.fields || {};
           const title = fields.title || "Untitled";
           const sanitizedTitle = this.sanitizeString(
             title.split(/\s+/).slice(0, 4).join(" ")

@@ -132,18 +132,19 @@ for (const file of files) {
         const parsedEntries = parsedResult.entries;
         console.log("Parsed entries:", parsedEntries);
 
-        for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
-            const title = fields.title || "Untitled";
-            const sanitizedTitle = this.sanitizeString(
-                title.split(/\s+/).slice(0, 4).join(" ")
-            );
+for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
+    const fields = entry.fields || {}; // Define fields for each entry
+    const title = fields.title || "Untitled";
+    const sanitizedTitle = this.sanitizeString(
+        title.split(/\s+/).slice(0, 4).join(" ")
+    );
 
-            const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
+    const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
 
-            // Write the file
-            await this.app.vault.create(fileName, populatedContent);
-            console.log(`Created Markdown file: ${fileName}`);
-        }
+    // Write the file
+    await this.app.vault.create(fileName, populatedContent);
+    console.log(`Created Markdown file: ${fileName}`);
+}
     } catch (error) {
         console.error(`Error processing file ${file.path}:`, error);
     }
