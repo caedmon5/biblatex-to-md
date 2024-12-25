@@ -28800,26 +28800,30 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
       const folders = this.app.vault.getAllLoadedFiles().filter((f) => f.children).map((folder) => folder.path);
       dropdown.addOption("/", "Vault Root");
       folders.forEach((folder) => dropdown.addOption(folder, folder));
-      dropdown.setValue(this.plugin.settings.templateDirectory);
+      dropdown.setValue(this.plugin.settings.templateDirectory || "/");
       dropdown.onChange(async (value) => {
         this.plugin.settings.templateDirectory = value;
         await this.plugin.saveSettings();
+        refreshTemplateFileDropdown();
       });
     });
     console.log("Template Directory setting added.");
-    new import_obsidian.Setting(containerEl).setName("Template File").setDesc("Select a specific template file.").addDropdown((dropdown) => {
-      const vaultPath = this.app.vault.adapter.basePath;
-      const templateDir = path.join(vaultPath, this.plugin.settings.templateDirectory);
-      const files = this.app.vault.getAllLoadedFiles().filter((f) => f.path.startsWith(templateDir) && !f.children).map((file) => file.path);
-      dropdown.addOption("", "None");
-      files.forEach((file) => dropdown.addOption(file, file));
-      dropdown.setValue(this.plugin.settings.templateFileName);
-      dropdown.onChange(async (value) => {
-        this.plugin.settings.templateFileName = value;
-        await this.plugin.saveSettings();
+    const refreshTemplateFileDropdown = () => {
+      const dropdown = new import_obsidian.Setting(containerEl).setName("Template File").setDesc("Select a specific template file.").addDropdown((dropdown2) => {
+        const vaultPath = this.app.vault.adapter.basePath;
+        const templateDir = path.join(vaultPath, this.plugin.settings.templateDirectory || "/");
+        const files = this.app.vault.getAllLoadedFiles().filter((f) => f.path.startsWith(templateDir) && !f.children).map((file) => file.path);
+        dropdown2.addOption("", "None");
+        files.forEach((file) => dropdown2.addOption(file, file));
+        dropdown2.setValue(this.plugin.settings.templateFileName || "");
+        dropdown2.onChange(async (value) => {
+          this.plugin.settings.templateFileName = value;
+          await this.plugin.saveSettings();
+        });
       });
-    });
-    console.log("Template File setting added.");
+      console.log("Template File dropdown refreshed.");
+    };
+    refreshTemplateFileDropdown();
     new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Specify the maximum number of entries to process from each BibTeX file (1 or more). Default is 5.").addText(
       (text) => text.setPlaceholder("e.g., 5 or 10000").setValue(String(this.plugin.settings.entryLimit)).onChange(async (value) => {
         console.log("Entry Limit (raw):", value);

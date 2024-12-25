@@ -45,6 +45,7 @@ console.log("Loaded settings:", this.plugin.settings);
     containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
 
     // Add setting for template path
+
 new Setting(containerEl)
     .setName("Template Directory")
     .setDesc("Specify the directory containing your templates.")
@@ -57,36 +58,48 @@ new Setting(containerEl)
         dropdown.addOption("/", "Vault Root");
         folders.forEach((folder) => dropdown.addOption(folder, folder));
 
-        dropdown.setValue(this.plugin.settings.templateDirectory);
+        dropdown.setValue(this.plugin.settings.templateDirectory || "/");
         dropdown.onChange(async (value) => {
             this.plugin.settings.templateDirectory = value;
             await this.plugin.saveSettings();
+
+            // Refresh template file dropdown after directory change
+            refreshTemplateFileDropdown();
         });
     });
 
 console.log("Template Directory setting added.");
 
-new Setting(containerEl)
-    .setName("Template File")
-    .setDesc("Select a specific template file.")
-    .addDropdown((dropdown) => {
-        const vaultPath = this.app.vault.adapter.basePath; // Get the vault root
-        const templateDir = path.join(vaultPath, this.plugin.settings.templateDirectory);
-        const files = this.app.vault.getAllLoadedFiles()
-            .filter((f) => f.path.startsWith(templateDir) && !f.children) // Only files in the template directory
-            .map((file) => file.path);
+// Function to refresh the template file dropdown
+const refreshTemplateFileDropdown = () => {
+    const dropdown = new Setting(containerEl)
+        .setName("Template File")
+        .setDesc("Select a specific template file.")
+        .addDropdown((dropdown) => {
+            const vaultPath = this.app.vault.adapter.basePath; // Get the vault root
+            const templateDir = path.join(vaultPath, this.plugin.settings.templateDirectory || "/");
 
-        dropdown.addOption("", "None"); // Default option
-        files.forEach((file) => dropdown.addOption(file, file));
+            // Fetch files in the selected directory
+            const files = this.app.vault.getAllLoadedFiles()
+                .filter((f) => f.path.startsWith(templateDir) && !f.children) // Only files
+                .map((file) => file.path);
 
-        dropdown.setValue(this.plugin.settings.templateFileName);
-        dropdown.onChange(async (value) => {
-            this.plugin.settings.templateFileName = value;
-            await this.plugin.saveSettings();
+            // Populate the dropdown
+            dropdown.addOption("", "None"); // Default option
+            files.forEach((file) => dropdown.addOption(file, file));
+
+            dropdown.setValue(this.plugin.settings.templateFileName || "");
+            dropdown.onChange(async (value) => {
+                this.plugin.settings.templateFileName = value;
+                await this.plugin.saveSettings();
+            });
         });
-    });
 
-console.log("Template File setting added.");
+    console.log("Template File dropdown refreshed.");
+};
+
+// Initial rendering of the dropdown
+refreshTemplateFileDropdown();
 
 
     // Add entry limit setting (text input instead of slider)
