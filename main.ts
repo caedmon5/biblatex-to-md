@@ -78,15 +78,16 @@ async importBibTeX() {
       const parsedEntries = parsedResult.entries;
       console.log("Parsed entries:", parsedEntries);
 
+      // Process up to 'entryLimit' from each file
       for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
         console.log("Parsed entry:", entry);
 
         const fields = entry.fields || {};
         const title = fields.title || "Untitled";
 
-        // ------------------------------
-        // 1) Build AUTHOR TAGS
-        // ------------------------------
+        //------------------------------------------------------
+        // 1) AUTHOR TAGS => authors: "#FryeN #SmithJ"
+        //------------------------------------------------------
         const authorsRaw = fields.author || "Unknown Author";
         const authorTags: string[] = [];
 
@@ -100,7 +101,7 @@ async importBibTeX() {
             authorTags.push(`#${tag}`);
           });
         } else if (Array.isArray(authorsRaw)) {
-          // If array of objects (e.g. [{ firstName: 'Northrup', lastName: 'Frye' }])
+          // e.g. [{ firstName: 'Northrup', lastName: 'Frye' }]
           authorsRaw.forEach((a) => {
             const first = a.firstName || "";
             const last = a.lastName || "";
@@ -119,26 +120,27 @@ async importBibTeX() {
           authorTags.push("#UnknownAuthor");
         }
 
-        // ------------------------------
-        // 2) Build KEYWORD TAGS
-        // ------------------------------
-        let keywords = fields.keywords || "";
+        // This will be inserted into {{authors}} in your template
+        const authorsField = authorTags.join(" ");
+
+        //------------------------------------------------------
+        // 2) KEYWORD TAGS => keywords: "#Anglo_Saxon #Old_English"
+        //------------------------------------------------------
         let keywordTags: string[] = [];
-        if (typeof keywords === "string" && keywords.trim()) {
+        if (typeof fields.keywords === "string" && fields.keywords.trim()) {
           // Split on commas
-          const keywordArray = keywords.split(",").map((k) => k.trim());
-          // e.g. "Old English" => "#Old_English"
-          keywordArray.forEach((kw) => {
-            keywordTags.push(`#${kw.replace(/\s+/g, "_")}`);
+          const keywordArray = fields.keywords.split(",").map((k) => k.trim());
+          keywordTags = keywordArray.map((kw) => {
+            // Replace spaces with underscores => "Old_English"
+            const noSpaces = kw.replace(/\s+/g, "_");
+            return `#${noSpaces}`;
           });
         }
+        const keywordsField = keywordTags.join(" ");
 
-        // Combine author tags + keyword tags
-        const allTags = [...authorTags, ...keywordTags].join(" ");
-
-        // ------------------------------
-        // 3) Other Fields
-        // ------------------------------
+        //------------------------------------------------------
+        // 3) Remaining fields
+        //------------------------------------------------------
         const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
         const abstract = fields.abstract || "No abstract provided.";
         const journaltitle = fields.journaltitle || "Unknown Journal";
@@ -147,36 +149,29 @@ async importBibTeX() {
         const lastModified = fields["date-modified"] || createdDate;
         const url = fields.url || "No link provided";
 
-        // If you still want "formattedKeywords" in your template, you can reuse "allTags" or "keywordTags"
-        // e.g. "formattedKeywords" => keywordTags.join(" ")
+        // Build the replacements object
         const replacements: Record<string, string> = {
           citekey,
           createdDate,
           lastModified,
+          authors: authorsField,   // <= For {{authors}} in template
+          keywords: keywordsField, // <= For {{keywords}} in template
           title,
           year,
           abstract,
           journaltitle,
-          // put them all in the "tags" field
-          tags: allTags,
-          // if your template references 'keywords' or 'formattedKeywords', you can do:
-          keywords: keywordTags.join(" "),
-          formattedKeywords: keywordTags.join(" "),
-
-          type: entry.type || "Unknown Type",
           publisher: fields.publisher || "Unknown Publisher",
           volume: fields.volume || "N/A",
           issue: fields.issue || "N/A",
           pages: fields.pages || "N/A",
           doi: fields.doi || "N/A",
           url,
-          zoteroLink: url,
-          conditionalFields: "",
+          zoteroLink: url,         // If your template references {{zoteroLink}}
+          type: entry.type || "Unknown Type",
+          conditionalFields: "",    // Only if you have a placeholder {{conditionalFields}}
         };
 
-        // ------------------------------
-        // 4) Generate the final note content
-        // ------------------------------
+        // Replace placeholders in the template
         const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
           const val = replacements[key.trim()];
           if (val === undefined) {
@@ -186,17 +181,17 @@ async importBibTeX() {
           return val;
         });
 
-        // ------------------------------
-        // 5) Write the file
-        // ------------------------------
+        //------------------------------------------------------
+        // 4) Write the file
+        //------------------------------------------------------
         const folderPath = "LN Literature Notes";
         if (!this.app.vault.getAbstractFileByPath(folderPath)) {
           await this.app.vault.createFolder(folderPath);
         }
 
-        const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
-        // Pick the first author tag for the file name, e.g. #FryeN => FryeN
+        // Use first author tag (without '#') as part of file name
         const firstAuthorTag = authorTags[0]?.replace(/^#/, "") || "UnknownAuthor";
+        const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
         const fileName = `LNL ${firstAuthorTag} ${year} ${sanitizedTitle}.md`;
 
         await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);

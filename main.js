@@ -28870,15 +28870,16 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           } else {
             authorTags.push("#UnknownAuthor");
           }
-          let keywords = fields.keywords || "";
+          const authorsField = authorTags.join(" ");
           let keywordTags = [];
-          if (typeof keywords === "string" && keywords.trim()) {
-            const keywordArray = keywords.split(",").map((k) => k.trim());
-            keywordArray.forEach((kw) => {
-              keywordTags.push(`#${kw.replace(/\s+/g, "_")}`);
+          if (typeof fields.keywords === "string" && fields.keywords.trim()) {
+            const keywordArray = fields.keywords.split(",").map((k) => k.trim());
+            keywordTags = keywordArray.map((kw) => {
+              const noSpaces = kw.replace(/\s+/g, "_");
+              return `#${noSpaces}`;
             });
           }
-          const allTags = [...authorTags, ...keywordTags].join(" ");
+          const keywordsField = keywordTags.join(" ");
           const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
           const abstract = fields.abstract || "No abstract provided.";
           const journaltitle = fields.journaltitle || "Unknown Journal";
@@ -28890,16 +28891,14 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             citekey,
             createdDate,
             lastModified,
+            authors: authorsField,
+            // <= For {{authors}} in template
+            keywords: keywordsField,
+            // <= For {{keywords}} in template
             title,
             year,
             abstract,
             journaltitle,
-            // put them all in the "tags" field
-            tags: allTags,
-            // if your template references 'keywords' or 'formattedKeywords', you can do:
-            keywords: keywordTags.join(" "),
-            formattedKeywords: keywordTags.join(" "),
-            type: entry.type || "Unknown Type",
             publisher: fields.publisher || "Unknown Publisher",
             volume: fields.volume || "N/A",
             issue: fields.issue || "N/A",
@@ -28907,7 +28906,10 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             doi: fields.doi || "N/A",
             url,
             zoteroLink: url,
+            // If your template references {{zoteroLink}}
+            type: entry.type || "Unknown Type",
             conditionalFields: ""
+            // Only if you have a placeholder {{conditionalFields}}
           };
           const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
             const val = replacements[key.trim()];
@@ -28921,8 +28923,8 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           if (!this.app.vault.getAbstractFileByPath(folderPath)) {
             await this.app.vault.createFolder(folderPath);
           }
-          const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
           const firstAuthorTag = authorTags[0]?.replace(/^#/, "") || "UnknownAuthor";
+          const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
           const fileName = `LNL ${firstAuthorTag} ${year} ${sanitizedTitle}.md`;
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
           console.log(`Created Markdown file: ${folderPath}/${fileName}`);
