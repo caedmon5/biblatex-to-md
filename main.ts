@@ -85,9 +85,9 @@ async importBibTeX() {
         const fields = entry.fields || {};
         const title = fields.title || "Untitled";
 
-        //------------------------------------------------------
-        // 1) AUTHOR TAGS => authors: "#FryeN #SmithJ"
-        //------------------------------------------------------
+        //---------------------------------------------------
+        // (1) AUTHOR TAGS => build an array like ["#FryeN", "#SmithJ"]
+        //---------------------------------------------------
         const authorsRaw = fields.author || "Unknown Author";
         const authorTags: string[] = [];
 
@@ -101,7 +101,7 @@ async importBibTeX() {
             authorTags.push(`#${tag}`);
           });
         } else if (Array.isArray(authorsRaw)) {
-          // e.g. [{ firstName: 'Northrup', lastName: 'Frye' }]
+          // e.g. [{ firstName: 'Northrup', lastName: 'Frye' }, ...]
           authorsRaw.forEach((a) => {
             const first = a.firstName || "";
             const last = a.lastName || "";
@@ -120,41 +120,30 @@ async importBibTeX() {
           authorTags.push("#UnknownAuthor");
         }
 
-        // This will be inserted into {{authors}} in your template
-        const authorsField = authorTags.join(" ");
+        // We'll store them as a single-line YAML array: ["#FryeN","#SmithJ"]
+        const authorsInlineArray = `["${authorTags.join('","')}"]`;
 
-        //------------------------------------------------------
-        // 2) KEYWORD TAGS => keywords: "#Anglo_Saxon #Old_English"
-        //------------------------------------------------------
+        //---------------------------------------------------
+        // (2) KEYWORD TAGS => build an array like ["#Anglo_Saxon", "#Old_English"]
+        //---------------------------------------------------
+        let keywordArray: string[] = [];
+        if (typeof fields.keywords === "string" && fields.keywords.trim()) {
+          // Remove any braces just in case
+          const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
+          if (cleaned) {
+            // Split on commas
+            const splitted = cleaned.split(",").map((k) => k.trim());
+            keywordArray = splitted.map((kw) => `#${kw.replace(/\s+/g, "_")}`);
+          }
+        } else if (Array.isArray(fields.keywords)) {
+          // If the parser returns an array
+          keywordArray = fields.keywords.map((kw: string) => `#${String(kw).replace(/\s+/g, "_")}`);
+        }
+        const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
 
-console.log("Raw keywords field:", fields.keywords);
-
-let keywordTags: string[] = [];
-
-if (Array.isArray(fields.keywords)) {
-  // e.g. ["survey", "Academic freedom", ...]
-  fields.keywords.forEach((k) => {
-    keywordTags.push(`#${String(k).replace(/\s+/g, "_")}`);
-  });
-} else if (typeof fields.keywords === "string") {
-  // Remove braces and split
-  const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
-  if (cleaned) {
-    const keywordArray = cleaned.split(",").map((k) => k.trim());
-    keywordArray.forEach((kw) => {
-      keywordTags.push(`#${kw.replace(/\s+/g, "_")}`);
-    });
-  }
-} else {
-  // fallback or do nothing if 'keywords' is missing
-}
-
-const keywordsField = keywordTags.join(" ");
-
-
-        //------------------------------------------------------
-        // 3) Remaining fields
-        //------------------------------------------------------
+        //---------------------------------------------------
+        // (3) Other fields
+        //---------------------------------------------------
         const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
         const abstract = fields.abstract || "No abstract provided.";
         const journaltitle = fields.journaltitle || "Unknown Journal";
@@ -168,21 +157,23 @@ const keywordsField = keywordTags.join(" ");
           citekey,
           createdDate,
           lastModified,
-          authors: authorsField,   // <= For {{authors}} in template
-          keywords: keywordsField, // <= For {{keywords}} in template
           title,
           year,
           abstract,
           journaltitle,
+          type: entry.type || "Unknown Type",
           publisher: fields.publisher || "Unknown Publisher",
           volume: fields.volume || "N/A",
           issue: fields.issue || "N/A",
           pages: fields.pages || "N/A",
           doi: fields.doi || "N/A",
           url,
-          zoteroLink: url,         // If your template references {{zoteroLink}}
-          type: entry.type || "Unknown Type",
-          conditionalFields: "",    // Only if you have a placeholder {{conditionalFields}}
+          zoteroLink: url,
+          conditionalFields: "",
+
+          // Insert the inline YAML arrays
+          authors: authorsInlineArray,   // for {{authors}} in the template
+          keywords: keywordsInlineArray, // for {{keywords}} in the template
         };
 
         // Replace placeholders in the template
@@ -195,15 +186,15 @@ const keywordsField = keywordTags.join(" ");
           return val;
         });
 
-        //------------------------------------------------------
-        // 4) Write the file
-        //------------------------------------------------------
+        //---------------------------------------------------
+        // (4) Write the file
+        //---------------------------------------------------
         const folderPath = "LN Literature Notes";
         if (!this.app.vault.getAbstractFileByPath(folderPath)) {
           await this.app.vault.createFolder(folderPath);
         }
 
-        // Use first author tag (without '#') as part of file name
+        // Use first author tag (minus '#') in the file name
         const firstAuthorTag = authorTags[0]?.replace(/^#/, "") || "UnknownAuthor";
         const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
         const fileName = `LNL ${firstAuthorTag} ${year} ${sanitizedTitle}.md`;

@@ -28870,24 +28870,18 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           } else {
             authorTags.push("#UnknownAuthor");
           }
-          const authorsField = authorTags.join(" ");
-          console.log("Raw keywords field:", fields.keywords);
-          let keywordTags = [];
-          if (Array.isArray(fields.keywords)) {
-            fields.keywords.forEach((k) => {
-              keywordTags.push(`#${String(k).replace(/\s+/g, "_")}`);
-            });
-          } else if (typeof fields.keywords === "string") {
+          const authorsInlineArray = `["${authorTags.join('","')}"]`;
+          let keywordArray = [];
+          if (typeof fields.keywords === "string" && fields.keywords.trim()) {
             const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
             if (cleaned) {
-              const keywordArray = cleaned.split(",").map((k) => k.trim());
-              keywordArray.forEach((kw) => {
-                keywordTags.push(`#${kw.replace(/\s+/g, "_")}`);
-              });
+              const splitted = cleaned.split(",").map((k) => k.trim());
+              keywordArray = splitted.map((kw) => `#${kw.replace(/\s+/g, "_")}`);
             }
-          } else {
+          } else if (Array.isArray(fields.keywords)) {
+            keywordArray = fields.keywords.map((kw) => `#${String(kw).replace(/\s+/g, "_")}`);
           }
-          const keywordsField = keywordTags.join(" ");
+          const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
           const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
           const abstract = fields.abstract || "No abstract provided.";
           const journaltitle = fields.journaltitle || "Unknown Journal";
@@ -28899,14 +28893,11 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             citekey,
             createdDate,
             lastModified,
-            authors: authorsField,
-            // <= For {{authors}} in template
-            keywords: keywordsField,
-            // <= For {{keywords}} in template
             title,
             year,
             abstract,
             journaltitle,
+            type: entry.type || "Unknown Type",
             publisher: fields.publisher || "Unknown Publisher",
             volume: fields.volume || "N/A",
             issue: fields.issue || "N/A",
@@ -28914,10 +28905,12 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             doi: fields.doi || "N/A",
             url,
             zoteroLink: url,
-            // If your template references {{zoteroLink}}
-            type: entry.type || "Unknown Type",
-            conditionalFields: ""
-            // Only if you have a placeholder {{conditionalFields}}
+            conditionalFields: "",
+            // Insert the inline YAML arrays
+            authors: authorsInlineArray,
+            // for {{authors}} in the template
+            keywords: keywordsInlineArray
+            // for {{keywords}} in the template
           };
           const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
             const val = replacements[key.trim()];
