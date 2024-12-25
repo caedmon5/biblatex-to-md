@@ -149,7 +149,7 @@ const { authorTags, fileNameAuthor } = this.processAuthors(authorsRaw);
           const authorSplits = cleaned.split(/\s+and\s+/i);
 
           authorSplits.forEach((authorStr) => {
-            const tag = this.buildAuthorTag(authorStr.trim());
+const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
             authorTags.push(`#${tag}`);
           });
         } else if (Array.isArray(authorsRaw)) {
@@ -189,7 +189,7 @@ const { authorTags, fileNameAuthor } = this.processAuthors(authorsRaw);
           }
         } else if (Array.isArray(fields.keywords)) {
           // If the parser returns an array
-          keywordArray = fields.keywords.map((kw: string) => `#${String(kw).replace(/\s+/g, "_")}`);
+keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(String(kw))}`);
         }
         const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
 

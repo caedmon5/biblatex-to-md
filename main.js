@@ -28891,7 +28891,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             const cleaned = authorsRaw.replace(/[{}]/g, "");
             const authorSplits = cleaned.split(/\s+and\s+/i);
             authorSplits.forEach((authorStr) => {
-              const tag = this.buildAuthorTag(authorStr.trim());
+              const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
               authorTags.push(`#${tag}`);
             });
           } else if (Array.isArray(authorsRaw)) {
@@ -28919,7 +28919,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
               keywordArray = splitted.map((kw) => `#${kw.replace(/\s+/g, "_")}`);
             }
           } else if (Array.isArray(fields.keywords)) {
-            keywordArray = fields.keywords.map((kw) => `#${String(kw).replace(/\s+/g, "_")}`);
+            keywordArray = fields.keywords.map((kw) => `#${this.sanitizeString(String(kw))}`);
           }
           const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
           const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
