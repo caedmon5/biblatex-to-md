@@ -248,8 +248,21 @@ keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(Strin
 
         // Use first author tag (minus '#') in the file name
 
-const sanitizedTitle = this.sanitizeString(title);
-const fileName = `LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
+// Sanitize and truncate title after the fourth word
+const truncatedTitle = this.sanitizeString(
+    title.split(/\s+/).slice(0, 4).join(" ")
+);
+
+// Add prefix if defined
+const filePrefix = this.settings.filePrefix ? `${this.settings.filePrefix} ` : "";
+
+// Ensure directory ends with a slash
+const fileDirectory = this.settings.fileDirectory.endsWith("/")
+    ? this.settings.fileDirectory
+    : `${this.settings.fileDirectory}/`;
+
+// Construct the full file path
+const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
 
         await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
         console.log(`Created Markdown file: ${folderPath}/${fileName}`);

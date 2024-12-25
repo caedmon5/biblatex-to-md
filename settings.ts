@@ -2,13 +2,19 @@ import { PluginSettingTab, Setting, App } from "obsidian";
 
 // Define plugin settings and their defaults
 export interface BibLaTeXPluginSettings {
-  templatePath: string;
-  entryLimit: number; // New setting
+  templatePath: string; // defines the path for the template
+  entryLimit: number; // limits the number of entries to be processed
+ filePrefix: string;      // New: Specifies the prefix for file names
+    fileDirectory: string;   // New: Specifies the directory for file creation
 }
 
 export const DEFAULT_SETTINGS: BibLaTeXPluginSettings = {
   templatePath: "templates/bibtex-template.md",
   entryLimit: 5, // Default is 5
+    filePrefix: "",     // Default to no prefix
+    fileDirectory: "./", // Default to current directory
+};
+
 };
 
 // Create a settings tab for user configuration
@@ -33,7 +39,7 @@ export class BibLaTeXPluginSettingTab extends PluginSettingTab {
     // Add setting for template path
     new Setting(containerEl)
       .setName("Template Path")
-      .setDesc("Path to the template file for Markdown notes.")
+      .setDesc("Specify the path to the template file for use with this plugin.")
       .addText((text) =>
         text
           .setPlaceholder("Enter template path")
@@ -48,7 +54,7 @@ export class BibLaTeXPluginSettingTab extends PluginSettingTab {
     // Add entry limit setting (text input instead of slider)
     new Setting(containerEl)
       .setName("Entry Limit")
-      .setDesc("Maximum number of entries to process from each BibTeX file (1 or more).")
+      .setDesc("Specify the maximum number of entries to process from each BibTeX file (1 or more). Default is 5.")
       .addText((text) =>
         text
           .setPlaceholder("e.g., 5 or 10000")
@@ -62,5 +68,35 @@ export class BibLaTeXPluginSettingTab extends PluginSettingTab {
             }
           })
       );
+
+// Add entry for output file prefix (default = none)
+new Setting(containerEl)
+    .setName("File Prefix")
+    .setDesc("Specify a prefix for file names (default = none).")
+    .addText((text) =>
+        text
+            .setPlaceholder("e.g., Notes_")
+            .setValue(this.plugin.settings.filePrefix)
+            .onChange(async (value) => {
+                this.plugin.settings.filePrefix = value;
+                await this.plugin.saveSettings();
+            })
+    );
+
+
+// Add entry for output file location (default = current)
+new Setting(containerEl)
+    .setName("File Directory")
+    .setDesc("Specify the directory for file creation (default is current).")
+    .addText((text) =>
+        text
+            .setPlaceholder("e.g., /my/notes")
+            .setValue(this.plugin.settings.fileDirectory)
+            .onChange(async (value) => {
+                this.plugin.settings.fileDirectory = value;
+                await this.plugin.saveSettings();
+            })
+    );
+
   }
 }
