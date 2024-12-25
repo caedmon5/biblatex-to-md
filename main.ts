@@ -248,8 +248,13 @@ keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(Strin
 
         // Use first author tag (minus '#') in the file name
 
-const sanitizedTitle = this.sanitizeString(title);
-const fileName = `LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
+// Truncate the title to the first four words and sanitize
+const truncatedTitle = this.sanitizeString(
+    title.split(/\s+/).slice(0, 4).join(" ")
+);
+
+const fileName = `LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
+
 
         await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
         console.log(`Created Markdown file: ${folderPath}/${fileName}`);
