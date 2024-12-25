@@ -18735,8 +18735,8 @@ var require_jabref = __commonJS({
         if (!decoded[tree])
           continue;
         for (const encoded of decoded[tree]) {
-          const fields = decode(encoded);
-          const level_type_name = decode(fields.shift(), ":");
+          const fields2 = decode(encoded);
+          const level_type_name = decode(fields2.shift(), ":");
           const m = /^([0-9]+) (.+)/.exec(level_type_name[0]);
           if (!m)
             break;
@@ -18745,8 +18745,8 @@ var require_jabref = __commonJS({
           if (type === "AllEntriesGroup")
             continue;
           const name = level_type_name[1];
-          const intersection = decode(fields.shift())[0];
-          const keys = tree === "grouping" ? [] : fields.map((field) => decode(field)[0]);
+          const intersection = decode(fields2.shift())[0];
+          const keys = tree === "grouping" ? [] : fields2.map((field) => decode(field)[0]);
           const group = {
             name,
             entries: keys,
@@ -28303,8 +28303,8 @@ var require_bibtex_parser = __commonJS({
         if (this.options.verbatimFields && this.options.verbatimFields.find((name) => typeof name === "string" ? name === field : field.match(name)))
           return "verbatim";
         let mode = "literal";
-        for (const [selected, fields] of Object.entries(this.fieldMode)) {
-          if (fields.find((match) => typeof match === "string" ? field === match : field.match(match)))
+        for (const [selected, fields2] of Object.entries(this.fieldMode)) {
+          if (fields2.find((match) => typeof match === "string" ? field === match : field.match(match)))
             mode = selected;
         }
         return mode;
@@ -28763,7 +28763,6 @@ __export(main_exports, {
   default: () => BibLaTeXPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var path2 = __toESM(require("path"));
 var import_obsidian2 = require("obsidian");
 
 // settings.ts
@@ -28906,7 +28905,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
       };
     }
     let authorTags = [];
-    let fileNameAuthor = "";
+    let fileNameAuthor2 = "";
     if (typeof authorsRaw === "string") {
       const cleaned = authorsRaw.replace(/[{}]/g, "");
       const authorSplits = cleaned.split(/\s+and\s+/i);
@@ -28914,15 +28913,15 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
         const lastNameOnly = authorStr.trim().split(",")[0].trim();
         authorTags.push(`#${lastNameOnly}`);
       });
-      fileNameAuthor = authorSplits.length > 1 ? `${authorTags[0].replace(/^#/, "")}_et_al` : authorTags[0].replace(/^#/, "");
+      fileNameAuthor2 = authorSplits.length > 1 ? `${authorTags[0].replace(/^#/, "")}_et_al` : authorTags[0].replace(/^#/, "");
     } else if (Array.isArray(authorsRaw)) {
       authorsRaw.forEach((a) => {
         const last = a.lastName || "Unknown";
         authorTags.push(`#${last}`);
       });
-      fileNameAuthor = authorTags.length > 1 ? `${authorTags[0].replace(/^#/, "")}_et_al` : authorTags[0].replace(/^#/, "");
+      fileNameAuthor2 = authorTags.length > 1 ? `${authorTags[0].replace(/^#/, "")}_et_al` : authorTags[0].replace(/^#/, "");
     }
-    return { authorTags, fileNameAuthor };
+    return { authorTags, fileNameAuthor: fileNameAuthor2 };
   }
   async importBibTeX() {
     const files = this.app.vault.getFiles().filter((file) => file.extension === "bib");
@@ -28950,108 +28949,11 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
         const parsedEntries = parsedResult.entries;
         console.log("Parsed entries:", parsedEntries);
         for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
-          console.log("Parsed entry:", entry);
-          const fields = entry.fields || {};
           const title = fields.title || "Untitled";
           const sanitizedTitle = this.sanitizeString(
             title.split(/\s+/).slice(0, 4).join(" ")
           );
-          console.log("Sanitized Title:", sanitizedTitle);
-          const authorsRaw = fields.author || "Unknown Author";
-          const { authorTags, fileNameAuthor } = this.processAuthors(authorsRaw);
-          if (typeof authorsRaw === "string") {
-            const cleaned = authorsRaw.replace(/[{}]/g, "");
-            const authorSplits = cleaned.split(/\s+and\s+/i);
-            authorSplits.forEach((authorStr) => {
-              const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
-              authorTags.push(`#${tag}`);
-            });
-          } else if (Array.isArray(authorsRaw)) {
-            authorsRaw.forEach((a) => {
-              const first = a.firstName || "";
-              const last = a.lastName || "";
-              const combined = `${first} ${last}`.trim();
-              const tag = this.buildAuthorTag(combined);
-              authorTags.push(`#${tag}`);
-            });
-          } else if (typeof authorsRaw === "object") {
-            const first = authorsRaw.firstName || "";
-            const last = authorsRaw.lastName || "";
-            const combined = `${first} ${last}`.trim();
-            authorTags.push(`#${this.buildAuthorTag(combined)}`);
-          } else {
-            authorTags.push("#UnknownAuthor");
-          }
-          const authorsInlineArray = `["${authorTags.join('","')}"]`;
-          let keywordArray = [];
-          if (typeof fields.keywords === "string" && fields.keywords.trim()) {
-            const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
-            if (cleaned) {
-              const splitted = cleaned.split(",").map((k) => k.trim());
-              keywordArray = splitted.map((kw) => `#${kw.replace(/\s+/g, "_")}`);
-            }
-          } else if (Array.isArray(fields.keywords)) {
-            keywordArray = fields.keywords.map((kw) => `#${this.sanitizeString(String(kw))}`);
-          }
-          const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
-          const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
-          const abstract = fields.abstract || "No abstract provided.";
-          const journaltitle = fields.journaltitle || "Unknown Journal";
-          const citekey = entry.key || "UnknownKey";
-          const createdDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-          const lastModified = fields["date-modified"] || createdDate;
-          const url = fields.url || "No link provided";
-          const replacements = {
-            citekey,
-            createdDate,
-            lastModified,
-            title,
-            year,
-            abstract,
-            journaltitle,
-            type: entry.type || "Unknown Type",
-            publisher: fields.publisher || "Unknown Publisher",
-            volume: fields.volume || "N/A",
-            issue: fields.issue || "N/A",
-            pages: fields.pages || "N/A",
-            doi: fields.doi || "N/A",
-            url,
-            zoteroLink: url,
-            conditionalFields: "",
-            // Insert the inline YAML arrays
-            authors: authorsInlineArray,
-            // for {{authors}} in the template
-            keywords: keywordsInlineArray
-            // for {{keywords}} in the template
-          };
-          const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
-            const val = replacements[key.trim()];
-            if (val === void 0) {
-              console.warn(`Warning: No replacement found for placeholder "{{${key}}}".`);
-              return `{{${key}}}`;
-            }
-            return val;
-          });
-          const folderPath = "LN Literature Notes";
-          if (!this.app.vault.getAbstractFileByPath(folderPath)) {
-            await this.app.vault.createFolder(folderPath);
-          }
-          const truncatedTitle = this.sanitizeString(
-            title.split(/\s+/).slice(0, 4).join(" ")
-          );
-          const filePrefix = this.settings.filePrefix ? `${this.settings.filePrefix} ` : "";
-          const vaultPath = this.app.vault.adapter.basePath;
-          const resolvedTemplateDirectory = this.settings.templateDirectory === "/" ? vaultPath : path2.join(vaultPath, this.settings.templateDirectory);
-          const templateFilePath = this.settings.templateFileName ? path2.join(resolvedTemplateDirectory, this.settings.templateFileName) : null;
-          if (templateFilePath && !await this.app.vault.adapter.exists(templateFilePath)) {
-            throw new Error(`Template file does not exist: ${templateFilePath}`);
-          }
-          const resolvedDirectory = path2.isAbsolute(this.settings.fileDirectory) ? path2.relative(vaultPath, this.settings.fileDirectory) : path2.join(vaultPath, this.settings.fileDirectory);
-          const fileDirectory = resolvedDirectory.endsWith("/") ? resolvedDirectory : `${resolvedDirectory}/`;
           const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
-          if (!this.app.vault.getAbstractFileByPath(fileDirectory)) {
-            await this.app.vault.createFolder(fileDirectory);
-          }
           await this.app.vault.create(fileName, populatedContent);
           console.log(`Created Markdown file: ${fileName}`);
         }
@@ -29061,7 +28963,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     }
     new import_obsidian2.Notice("BibTeX entries imported successfully!");
   }
-  // helper plugin
+  // Helper plugin method: buildAuthorTag
   buildAuthorTag(authorStr) {
     const trimmed = authorStr.trim();
     if (!trimmed || trimmed.toLowerCase() === "unknown author") {
@@ -29079,8 +28981,9 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
       return `${last}${firstInitial}`;
     }
   }
-  // Plugin cleanup (optional, for when the plugin is disabled)
+  // Plugin cleanup
   onunload() {
     console.log("BibLaTeX Plugin unloaded.");
   }
+  // End of onunload()
 };
