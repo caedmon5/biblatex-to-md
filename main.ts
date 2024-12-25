@@ -44,6 +44,46 @@ export default class BibLaTeXPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+/**
+ * Helper function to process author names
+ * @param {Array|Object|string} authorsRaw - Raw authors data
+ * @returns {Object} Object with formatted tags and filenames
+ */
+processAuthors(authorsRaw) {
+    if (!authorsRaw || authorsRaw === "Unknown Author") {
+        return {
+            authorTags: ["#UnknownAuthor"],
+            fileNameAuthor: "UnknownAuthor"
+        };
+    }
+
+    let authorTags = [];
+    let fileNameAuthor = "";
+
+    if (typeof authorsRaw === "string") {
+        const cleaned = authorsRaw.replace(/[{}]/g, "");
+        const authorSplits = cleaned.split(/\s+and\s+/i);  // Splits multiple authors
+        authorSplits.forEach((authorStr) => {
+            const lastNameOnly = authorStr.trim().split(",")[0].trim();
+            authorTags.push(`#${lastNameOnly}`);
+        });
+        fileNameAuthor = authorSplits.length > 1
+            ? `${authorTags[0].replace(/^#/, "")}_et_al`
+            : authorTags[0].replace(/^#/, "");
+    } else if (Array.isArray(authorsRaw)) {
+        authorsRaw.forEach((a) => {
+            const last = a.lastName || "Unknown";
+            authorTags.push(`#${last}`);
+        });
+        fileNameAuthor = authorTags.length > 1
+            ? `${authorTags[0].replace(/^#/, "")}_et_al`
+            : authorTags[0].replace(/^#/, "");
+    }
+
+    return { authorTags, fileNameAuthor };
+}
+
+
 async importBibTeX() {
   const files = this.app.vault.getFiles().filter((file) => file.extension === "bib");
   console.log("Found .bib files:", files.map((file) => file.path));
@@ -88,8 +128,8 @@ async importBibTeX() {
         //---------------------------------------------------
         // (1) AUTHOR TAGS => build an array like ["#FryeN", "#SmithJ"]
         //---------------------------------------------------
-        const authorsRaw = fields.author || "Unknown Author";
-        const authorTags: string[] = [];
+const authorsRaw = fields.author || "Unknown Author";
+const { authorTags, fileNameAuthor } = this.processAuthors(authorsRaw);
 
         if (typeof authorsRaw === "string") {
           // Remove braces; split on " and "
@@ -195,9 +235,9 @@ async importBibTeX() {
         }
 
         // Use first author tag (minus '#') in the file name
-        const firstAuthorTag = authorTags[0]?.replace(/^#/, "") || "UnknownAuthor";
-        const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
-        const fileName = `LNL ${firstAuthorTag} ${year} ${sanitizedTitle}.md`;
+
+const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_");
+const fileName = `LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
 
         await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
         console.log(`Created Markdown file: ${folderPath}/${fileName}`);
