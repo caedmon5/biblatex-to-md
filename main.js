@@ -28767,6 +28767,7 @@ var path2 = __toESM(require("path"));
 var import_obsidian2 = require("obsidian");
 
 // settings.ts
+var path = __toESM(require("path"));
 var import_obsidian = require("obsidian");
 var DEFAULT_SETTINGS = {
   templatePath: "/",

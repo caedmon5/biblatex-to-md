@@ -1,3 +1,4 @@
+import * as path from "path";
 import { PluginSettingTab, Setting, App } from "obsidian";
 
 // Define plugin settings and their defaults
