@@ -28871,13 +28871,21 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             authorTags.push("#UnknownAuthor");
           }
           const authorsField = authorTags.join(" ");
+          console.log("Raw keywords field:", fields.keywords);
           let keywordTags = [];
-          if (typeof fields.keywords === "string" && fields.keywords.trim()) {
-            const keywordArray = fields.keywords.split(",").map((k) => k.trim());
-            keywordTags = keywordArray.map((kw) => {
-              const noSpaces = kw.replace(/\s+/g, "_");
-              return `#${noSpaces}`;
+          if (Array.isArray(fields.keywords)) {
+            fields.keywords.forEach((k) => {
+              keywordTags.push(`#${String(k).replace(/\s+/g, "_")}`);
             });
+          } else if (typeof fields.keywords === "string") {
+            const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
+            if (cleaned) {
+              const keywordArray = cleaned.split(",").map((k) => k.trim());
+              keywordArray.forEach((kw) => {
+                keywordTags.push(`#${kw.replace(/\s+/g, "_")}`);
+              });
+            }
+          } else {
           }
           const keywordsField = keywordTags.join(" ");
           const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";

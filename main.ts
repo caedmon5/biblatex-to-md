@@ -126,17 +126,31 @@ async importBibTeX() {
         //------------------------------------------------------
         // 2) KEYWORD TAGS => keywords: "#Anglo_Saxon #Old_English"
         //------------------------------------------------------
-        let keywordTags: string[] = [];
-        if (typeof fields.keywords === "string" && fields.keywords.trim()) {
-          // Split on commas
-          const keywordArray = fields.keywords.split(",").map((k) => k.trim());
-          keywordTags = keywordArray.map((kw) => {
-            // Replace spaces with underscores => "Old_English"
-            const noSpaces = kw.replace(/\s+/g, "_");
-            return `#${noSpaces}`;
-          });
-        }
-        const keywordsField = keywordTags.join(" ");
+
+console.log("Raw keywords field:", fields.keywords);
+
+let keywordTags: string[] = [];
+
+if (Array.isArray(fields.keywords)) {
+  // e.g. ["survey", "Academic freedom", ...]
+  fields.keywords.forEach((k) => {
+    keywordTags.push(`#${String(k).replace(/\s+/g, "_")}`);
+  });
+} else if (typeof fields.keywords === "string") {
+  // Remove braces and split
+  const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
+  if (cleaned) {
+    const keywordArray = cleaned.split(",").map((k) => k.trim());
+    keywordArray.forEach((kw) => {
+      keywordTags.push(`#${kw.replace(/\s+/g, "_")}`);
+    });
+  }
+} else {
+  // fallback or do nothing if 'keywords' is missing
+}
+
+const keywordsField = keywordTags.join(" ");
+
 
         //------------------------------------------------------
         // 3) Remaining fields
