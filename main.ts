@@ -78,136 +78,126 @@ async importBibTeX() {
       const parsedEntries = parsedResult.entries;
       console.log("Parsed entries:", parsedEntries);
 
-      // Only process up to the 'entryLimit' from each file
       for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
         console.log("Parsed entry:", entry);
 
         const fields = entry.fields || {};
         const title = fields.title || "Untitled";
 
-// --- 1) Get authors in "LastName, FirstName; LastName, FirstName" format ---
-let authorsRaw = fields.author || "Unknown Author";
-let authorsFinal = "";
+        // ------------------------------
+        // 1) Build AUTHOR TAGS
+        // ------------------------------
+        const authorsRaw = fields.author || "Unknown Author";
+        const authorTags: string[] = [];
 
-if (typeof authorsRaw === "string") {
-  // Remove braces and split on " and " to handle multiple authors.
-  const cleaned = authorsRaw.replace(/[{}]/g, "");
-  const authorSplits = cleaned.split(/\s+and\s+/i);
+        if (typeof authorsRaw === "string") {
+          // Remove braces; split on " and "
+          const cleaned = authorsRaw.replace(/[{}]/g, "");
+          const authorSplits = cleaned.split(/\s+and\s+/i);
 
-  // Each author might already be "Last, First" or "First Last".
-  // We'll attempt to parse and output "LastName, FirstName".
-  const processed = authorSplits.map((authorStr) => {
-    // Check if there's a comma that likely separates last/first
-    if (authorStr.includes(",")) {
-      // e.g. "Christakis, Nicholas A." → keep as is, but trim
-      return authorStr.trim();
-    } else {
-      // e.g. "Nicholas A. Christakis"
-      const parts = authorStr.trim().split(/\s+/);
-      // The last part is likely the last name
-      const lastName = parts.pop();
-      const firstNames = parts.join(" ");
-      return `${lastName}, ${firstNames}`.trim();
-    }
-  });
-  authorsFinal = processed.join("; ");
-} else if (Array.isArray(authorsRaw)) {
-  // If it's an array of objects from the parser
-  // e.g. [{ firstName: "John", lastName: "Smith" }, ...]
-  authorsFinal = authorsRaw
-    .map((a) => {
-      const fn = a.firstName?.trim() || "";
-      const ln = a.lastName?.trim() || "";
-      return (ln && fn) ? `${ln}, ${fn}` : (ln || fn || "Unknown");
-    })
-    .join("; ");
-} else if (typeof authorsRaw === "object") {
-  // If there's a single object
-  const fn = authorsRaw.firstName?.trim() || "";
-  const ln = authorsRaw.lastName?.trim() || "";
-  authorsFinal = (ln && fn) ? `${ln}, ${fn}` : (ln || fn || "Unknown");
-} else {
-  authorsFinal = String(authorsRaw); 
-}
+          authorSplits.forEach((authorStr) => {
+            const tag = this.buildAuthorTag(authorStr.trim());
+            authorTags.push(`#${tag}`);
+          });
+        } else if (Array.isArray(authorsRaw)) {
+          // If array of objects (e.g. [{ firstName: 'Northrup', lastName: 'Frye' }])
+          authorsRaw.forEach((a) => {
+            const first = a.firstName || "";
+            const last = a.lastName || "";
+            const combined = `${first} ${last}`.trim();
+            const tag = this.buildAuthorTag(combined);
+            authorTags.push(`#${tag}`);
+          });
+        } else if (typeof authorsRaw === "object") {
+          // Single object
+          const first = authorsRaw.firstName || "";
+          const last = authorsRaw.lastName || "";
+          const combined = `${first} ${last}`.trim();
+          authorTags.push(`#${this.buildAuthorTag(combined)}`);
+        } else {
+          // Fallback
+          authorTags.push("#UnknownAuthor");
+        }
 
-        // --- 2) Derive other fields ---
+        // ------------------------------
+        // 2) Build KEYWORD TAGS
+        // ------------------------------
+        let keywords = fields.keywords || "";
+        let keywordTags: string[] = [];
+        if (typeof keywords === "string" && keywords.trim()) {
+          // Split on commas
+          const keywordArray = keywords.split(",").map((k) => k.trim());
+          // e.g. "Old English" => "#Old_English"
+          keywordArray.forEach((kw) => {
+            keywordTags.push(`#${kw.replace(/\s+/g, "_")}`);
+          });
+        }
+
+        // Combine author tags + keyword tags
+        const allTags = [...authorTags, ...keywordTags].join(" ");
+
+        // ------------------------------
+        // 3) Other Fields
+        // ------------------------------
         const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
         const abstract = fields.abstract || "No abstract provided.";
         const journaltitle = fields.journaltitle || "Unknown Journal";
-        const keywords = fields.keywords || "None";
-
-        // 2a) Format the keywords with # 
-        let formattedKeywords = "";
-        if (typeof keywords === "string" && keywords.trim()) {
-          const keywordArray = keywords.split(",").map((k: string) => k.trim());
-          formattedKeywords = keywordArray
-            .map((k: string) => `#${k.replace(/\s+/g, "_")}`)
-            .join(" ");
-        }
-
-        // 2b) Build some tags from authors + keywords (adjust as desired)
-        let tags = `${authorsFinal} ${formattedKeywords}`.trim();
-
-        // 2c) A “createdDate” and “lastModified”
-        // If you don’t store a “date-modified” in fields, you can default to today or “Unknown”
+        const citekey = entry.key || "UnknownKey";
         const createdDate = new Date().toISOString().split("T")[0];
         const lastModified = fields["date-modified"] || createdDate;
+        const url = fields.url || "No link provided";
 
-        // 2d) A citekey if you want to store it
-        const citekey = entry.key || "UnknownKey";
-
-        // 2e) If you have a Zotero link, or just store the 'url' from the fields
-        const zoteroLink = fields.url || "No link provided";
-
-        // 2f) If you want “conditionalFields” for something dynamic, or just leave it empty
-        let conditionalFields = ""; 
-        // If you want logic, you can do:
-        // if (something) { conditionalFields = "Special info here"; }
-
-        // --- 3) Replacements object includes all placeholders from your template ---
+        // If you still want "formattedKeywords" in your template, you can reuse "allTags" or "keywordTags"
+        // e.g. "formattedKeywords" => keywordTags.join(" ")
         const replacements: Record<string, string> = {
           citekey,
           createdDate,
           lastModified,
-          tags,
-          formattedKeywords,
-          zoteroLink,
-          conditionalFields,
-
-          type: entry.type || "Unknown Type",
-          authors: authorsFinal,
           title,
           year,
           abstract,
           journaltitle,
-          keywords,
+          // put them all in the "tags" field
+          tags: allTags,
+          // if your template references 'keywords' or 'formattedKeywords', you can do:
+          keywords: keywordTags.join(" "),
+          formattedKeywords: keywordTags.join(" "),
+
+          type: entry.type || "Unknown Type",
           publisher: fields.publisher || "Unknown Publisher",
           volume: fields.volume || "N/A",
           issue: fields.issue || "N/A",
           pages: fields.pages || "N/A",
           doi: fields.doi || "N/A",
-          url: fields.url || "No URL provided"
+          url,
+          zoteroLink: url,
+          conditionalFields: "",
         };
 
-        // --- 4) Replace placeholders in the template
+        // ------------------------------
+        // 4) Generate the final note content
+        // ------------------------------
         const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
-          const value = replacements[key.trim()];
-          if (value === undefined) {
+          const val = replacements[key.trim()];
+          if (val === undefined) {
             console.warn(`Warning: No replacement found for placeholder "{{${key}}}".`);
             return `{{${key}}}`;
           }
-          return value;
+          return val;
         });
 
-        // --- 5) Write file
+        // ------------------------------
+        // 5) Write the file
+        // ------------------------------
         const folderPath = "LN Literature Notes";
         if (!this.app.vault.getAbstractFileByPath(folderPath)) {
           await this.app.vault.createFolder(folderPath);
         }
 
         const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
-        const sanitizedAuthors = authorsFinal.replace(/[\/\\:*?"<>|]/g, "_");
-        const fileName = `LNL ${sanitizedAuthors} ${year} ${sanitizedTitle}.md`;
+        // Pick the first author tag for the file name, e.g. #FryeN => FryeN
+        const firstAuthorTag = authorTags[0]?.replace(/^#/, "") || "UnknownAuthor";
+        const fileName = `LNL ${firstAuthorTag} ${year} ${sanitizedTitle}.md`;
 
         await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
         console.log(`Created Markdown file: ${folderPath}/${fileName}`);
@@ -219,6 +209,36 @@ if (typeof authorsRaw === "string") {
 
   new Notice("BibTeX entries imported successfully!");
 }
+
+// helper plugin
+
+buildAuthorTag(authorStr: string): string {
+  // e.g. "Northrup Frye" => "FryeN"
+  // e.g. "Frye, Northrup" => "FryeN"
+  const trimmed = authorStr.trim();
+  if (!trimmed || trimmed.toLowerCase() === "unknown author") {
+    return "UnknownAuthor";
+  }
+
+  // Check if there's a comma => typically "Last, First"
+  if (trimmed.includes(",")) {
+    // e.g. "Frye, Northrup Bertram"
+    const [last, firstRest] = trimmed.split(",", 2).map((s) => s.trim());
+    // Only the first initial of the firstRest
+    const firstInitial = firstRest?.[0] ?? "";
+    return `${last}${firstInitial}`;
+  } else {
+    // e.g. "Northrup Bertram Frye"
+    const parts = trimmed.split(/\s+/);
+    // last part = last name
+    const last = parts.pop() || "";
+    const first = parts.shift() || ""; 
+    const firstInitial = first?.[0] ?? "";
+    return `${last}${firstInitial}`;
+  }
+}
+
+
 
   // Plugin cleanup (optional, for when the plugin is disabled)
   onunload() {
