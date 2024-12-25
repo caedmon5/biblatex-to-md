@@ -29049,8 +29049,11 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           const resolvedDirectory = path2.isAbsolute(this.settings.fileDirectory) ? this.settings.fileDirectory : path2.join(vaultPath, this.settings.fileDirectory);
           const fileDirectory = resolvedDirectory.endsWith("/") ? resolvedDirectory : `${resolvedDirectory}/`;
           const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
-          await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
-          console.log(`Created Markdown file: ${folderPath}/${fileName}`);
+          if (!this.app.vault.getAbstractFileByPath(fileDirectory)) {
+            await this.app.vault.createFolder(fileDirectory);
+          }
+          await this.app.vault.create(fileName, populatedContent);
+          console.log(`Created Markdown file: ${fileName}`);
         }
       } catch (error) {
         console.error(`Error processing file ${file.path}:`, error);

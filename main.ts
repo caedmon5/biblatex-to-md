@@ -286,6 +286,8 @@ if (templateFilePath && !(await this.app.vault.adapter.exists(templateFilePath))
 
 // Resolve the directory path
 
+
+// Resolve the directory path for file creation
 const resolvedDirectory = path.isAbsolute(this.settings.fileDirectory)
     ? this.settings.fileDirectory // Use the absolute path as-is
     : path.join(vaultPath, this.settings.fileDirectory); // Combine relative paths with vaultPath
@@ -298,8 +300,14 @@ const fileDirectory = resolvedDirectory.endsWith("/")
 // Construct the full file path
 const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
 
-        await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
-        console.log(`Created Markdown file: ${folderPath}/${fileName}`);
+// Ensure the target directory exists
+if (!this.app.vault.getAbstractFileByPath(fileDirectory)) {
+    await this.app.vault.createFolder(fileDirectory);
+}
+
+// Write the file
+await this.app.vault.create(fileName, populatedContent);
+console.log(`Created Markdown file: ${fileName}`);
       }
     } catch (error) {
       console.error(`Error processing file ${file.path}:`, error);
