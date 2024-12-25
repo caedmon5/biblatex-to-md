@@ -1,7 +1,7 @@
 {
   "templatePath": "templates/bibtex-template.md",
   "entryLimit": 5,
-  "filePrefix": "LNL",
+  "filePrefix": "LNL ",
   "fileDirectory": "temp",
   "templateDirectory": "templates",
   "templateFileName": ""

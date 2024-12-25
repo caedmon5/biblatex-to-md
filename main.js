@@ -28953,6 +28953,10 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           console.log("Parsed entry:", entry);
           const fields = entry.fields || {};
           const title = fields.title || "Untitled";
+          const sanitizedTitle = this.sanitizeString(
+            title.split(/\s+/).slice(0, 4).join(" ")
+          );
+          console.log("Sanitized Title:", sanitizedTitle);
           const authorsRaw = fields.author || "Unknown Author";
           const { authorTags, fileNameAuthor } = this.processAuthors(authorsRaw);
           if (typeof authorsRaw === "string") {

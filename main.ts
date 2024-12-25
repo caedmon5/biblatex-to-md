@@ -138,6 +138,15 @@ async importBibTeX() {
         const fields = entry.fields || {};
         const title = fields.title || "Untitled";
 
+// Sanitize and truncate title after the fourth word
+const sanitizedTitle = this.sanitizeString(
+    title.split(/\s+/).slice(0, 4).join(" ")
+);
+
+console.log("Sanitized Title:", sanitizedTitle);
+
+
+
         //---------------------------------------------------
         // (1) AUTHOR TAGS => build an array like ["#FryeN", "#SmithJ"]
         //---------------------------------------------------
