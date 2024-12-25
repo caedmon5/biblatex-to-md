@@ -29046,7 +29046,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           if (templateFilePath && !await this.app.vault.adapter.exists(templateFilePath)) {
             throw new Error(`Template file does not exist: ${templateFilePath}`);
           }
-          const resolvedDirectory = path2.isAbsolute(this.settings.fileDirectory) ? this.settings.fileDirectory : path2.join(vaultPath, this.settings.fileDirectory);
+          const resolvedDirectory = path2.isAbsolute(this.settings.fileDirectory) ? path2.relative(vaultPath, this.settings.fileDirectory) : path2.join(vaultPath, this.settings.fileDirectory);
           const fileDirectory = resolvedDirectory.endsWith("/") ? resolvedDirectory : `${resolvedDirectory}/`;
           const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
           if (!this.app.vault.getAbstractFileByPath(fileDirectory)) {

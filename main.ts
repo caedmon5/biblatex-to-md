@@ -287,9 +287,9 @@ if (templateFilePath && !(await this.app.vault.adapter.exists(templateFilePath))
 // Resolve the directory path
 
 
-// Resolve the directory path for file creation
+// Ensure the directory path is relative to the vault root
 const resolvedDirectory = path.isAbsolute(this.settings.fileDirectory)
-    ? this.settings.fileDirectory // Use the absolute path as-is
+    ? path.relative(vaultPath, this.settings.fileDirectory) // Ensure it’s relative to the vault root
     : path.join(vaultPath, this.settings.fileDirectory); // Combine relative paths with vaultPath
 
 // Ensure directory ends with a slash
