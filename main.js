@@ -28809,14 +28809,18 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
     });
     console.log("Template Directory setting added.");
     const refreshTemplateFileDropdown = () => {
-      const dropdown = new import_obsidian.Setting(containerEl).setName("Template File").setDesc("Select a specific template file.").addDropdown((dropdown2) => {
+      const existingTemplateFileSetting = containerEl.querySelector(".template-file-setting");
+      if (existingTemplateFileSetting) {
+        existingTemplateFileSetting.remove();
+      }
+      new import_obsidian.Setting(containerEl).setName("Template File").setDesc("Select a specific template file.").setClass("template-file-setting").addDropdown((dropdown) => {
         const vaultPath = this.app.vault.adapter.basePath;
         const templateDir = path.join(vaultPath, this.plugin.settings.templateDirectory || "/");
         const files = this.app.vault.getAllLoadedFiles().filter((f) => f.path.startsWith(templateDir) && !f.children).map((file) => file.path);
-        dropdown2.addOption("", "None");
-        files.forEach((file) => dropdown2.addOption(file, file));
-        dropdown2.setValue(this.plugin.settings.templateFileName || "");
-        dropdown2.onChange(async (value) => {
+        dropdown.addOption("", "None");
+        files.forEach((file) => dropdown.addOption(file, file));
+        dropdown.setValue(this.plugin.settings.templateFileName || "");
+        dropdown.onChange(async (value) => {
           this.plugin.settings.templateFileName = value;
           await this.plugin.saveSettings();
         });

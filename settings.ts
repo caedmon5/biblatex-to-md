@@ -70,11 +70,21 @@ new Setting(containerEl)
 
 console.log("Template Directory setting added.");
 
+
 // Function to refresh the template file dropdown
+
 const refreshTemplateFileDropdown = () => {
-    const dropdown = new Setting(containerEl)
+    // Remove the existing Template File dropdown, if any
+    const existingTemplateFileSetting = containerEl.querySelector(".template-file-setting");
+    if (existingTemplateFileSetting) {
+        existingTemplateFileSetting.remove();
+    }
+
+    // Add a new Template File dropdown
+    new Setting(containerEl)
         .setName("Template File")
         .setDesc("Select a specific template file.")
+        .setClass("template-file-setting") // Add a class for easier selection
         .addDropdown((dropdown) => {
             const vaultPath = this.app.vault.adapter.basePath; // Get the vault root
             const templateDir = path.join(vaultPath, this.plugin.settings.templateDirectory || "/");
