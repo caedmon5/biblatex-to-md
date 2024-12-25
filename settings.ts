@@ -36,6 +36,10 @@ export class BibLaTeXPluginSettingTab extends PluginSettingTab {
     // Clear previous content in the settings panel
     containerEl.empty();
 
+console.log("Loaded settings:", this.plugin.settings);
+
+
+
     // Create header for settings
     containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
 
@@ -59,6 +63,8 @@ new Setting(containerEl)
         });
     });
 
+console.log("Template Directory setting added.");
+
 new Setting(containerEl)
     .setName("Template File")
     .setDesc("Select a specific template file.")
@@ -79,6 +85,9 @@ new Setting(containerEl)
         });
     });
 
+console.log("Template File setting added.");
+
+
     // Add entry limit setting (text input instead of slider)
     new Setting(containerEl)
       .setName("Entry Limit")
@@ -97,6 +106,9 @@ new Setting(containerEl)
           })
       );
 
+console.log("Entry Limit setting added.");
+
+
 // Add entry for output file prefix (default = none)
 new Setting(containerEl)
     .setName("File Prefix")
@@ -110,6 +122,8 @@ new Setting(containerEl)
                 await this.plugin.saveSettings();
             })
     );
+
+console.log("File Prefix setting added.");
 
 
 // Add entry for output file location (default = current)
@@ -132,6 +146,8 @@ new Setting(containerEl)
             await this.plugin.saveSettings();
         });
     });
+
+console.log("File Directory setting added.");
 
   }
 }

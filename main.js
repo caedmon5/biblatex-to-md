@@ -28792,6 +28792,7 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
+    console.log("Loaded settings:", this.plugin.settings);
     containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
     new import_obsidian.Setting(containerEl).setName("Template Directory").setDesc("Specify the directory containing your templates.").addDropdown((dropdown) => {
       const vaultPath = this.app.vault.adapter.basePath;
@@ -28804,6 +28805,7 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
+    console.log("Template Directory setting added.");
     new import_obsidian.Setting(containerEl).setName("Template File").setDesc("Select a specific template file.").addDropdown((dropdown) => {
       const vaultPath = this.app.vault.adapter.basePath;
       const templateDir = path.join(vaultPath, this.plugin.settings.templateDirectory);
@@ -28816,6 +28818,7 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
+    console.log("Template File setting added.");
     new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Specify the maximum number of entries to process from each BibTeX file (1 or more). Default is 5.").addText(
       (text) => text.setPlaceholder("e.g., 5 or 10000").setValue(String(this.plugin.settings.entryLimit)).onChange(async (value) => {
         console.log("Entry Limit (raw):", value);
@@ -28826,12 +28829,14 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       })
     );
+    console.log("Entry Limit setting added.");
     new import_obsidian.Setting(containerEl).setName("File Prefix").setDesc("Specify a prefix for file names (default = none).").addText(
       (text) => text.setPlaceholder("e.g., Notes_").setValue(this.plugin.settings.filePrefix).onChange(async (value) => {
         this.plugin.settings.filePrefix = value;
         await this.plugin.saveSettings();
       })
     );
+    console.log("File Prefix setting added.");
     new import_obsidian.Setting(containerEl).setName("File Directory").setDesc("Specify the directory for file creation (default is current).").addDropdown((dropdown) => {
       const vaultPath = this.app.vault.adapter.basePath;
       const folders = this.app.vault.getAllLoadedFiles().filter((f) => f.children).map((folder) => folder.path);
@@ -28843,6 +28848,7 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
+    console.log("File Directory setting added.");
   }
 };
 
