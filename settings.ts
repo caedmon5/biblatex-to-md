@@ -6,6 +6,9 @@ export interface BibLaTeXPluginSettings {
   entryLimit: number; // limits the number of entries to be processed
  filePrefix: string;      // New: Specifies the prefix for file names
     fileDirectory: string;   // New: Specifies the directory for file creation
+templateDirectory: string;  // Directory containing templates
+templateFileName: string;   // Specific template file
+
 }
 
 export const DEFAULT_SETTINGS: BibLaTeXPluginSettings = {
@@ -13,6 +16,8 @@ export const DEFAULT_SETTINGS: BibLaTeXPluginSettings = {
   entryLimit: 5, // Default is 5
     filePrefix: "",     // Default to no prefix
     fileDirectory: "/", // Default to the root directory
+    templateDirectory: "/", // default to obsidian root directory
+    templateFileName: "", // default is no template filename
 };
 
 // Create a settings tab for user configuration
@@ -35,19 +40,44 @@ export class BibLaTeXPluginSettingTab extends PluginSettingTab {
     containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
 
     // Add setting for template path
-    new Setting(containerEl)
-      .setName("Template Path")
-      .setDesc("Specify the path to the template file for use with this plugin.")
-      .addText((text) =>
-        text
-          .setPlaceholder("Enter template path")
-          .setValue(this.plugin.settings.templatePath)
-          .onChange(async (value) => {
-            console.log("Template Path: " + value);
-            this.plugin.settings.templatePath = value;
+new Setting(containerEl)
+    .setName("Template Directory")
+    .setDesc("Specify the directory containing your templates.")
+    .addDropdown((dropdown) => {
+        const vaultPath = this.app.vault.adapter.basePath; // Get the vault root
+        const folders = this.app.vault.getAllLoadedFiles()
+            .filter((f) => f.children) // Only directories
+            .map((folder) => folder.path);
+
+        dropdown.addOption("/", "Vault Root");
+        folders.forEach((folder) => dropdown.addOption(folder, folder));
+
+        dropdown.setValue(this.plugin.settings.templateDirectory);
+        dropdown.onChange(async (value) => {
+            this.plugin.settings.templateDirectory = value;
             await this.plugin.saveSettings();
-          })
-      );
+        });
+    });
+
+new Setting(containerEl)
+    .setName("Template File")
+    .setDesc("Select a specific template file.")
+    .addDropdown((dropdown) => {
+        const vaultPath = this.app.vault.adapter.basePath; // Get the vault root
+        const templateDir = path.join(vaultPath, this.plugin.settings.templateDirectory);
+        const files = this.app.vault.getAllLoadedFiles()
+            .filter((f) => f.path.startsWith(templateDir) && !f.children) // Only files in the template directory
+            .map((file) => file.path);
+
+        dropdown.addOption("", "None"); // Default option
+        files.forEach((file) => dropdown.addOption(file, file));
+
+        dropdown.setValue(this.plugin.settings.templateFileName);
+        dropdown.onChange(async (value) => {
+            this.plugin.settings.templateFileName = value;
+            await this.plugin.saveSettings();
+        });
+    });
 
     // Add entry limit setting (text input instead of slider)
     new Setting(containerEl)

@@ -260,6 +260,21 @@ const filePrefix = this.settings.filePrefix ? `${this.settings.filePrefix} ` : "
 // Get the Obsidian vault path
 const vaultPath = this.app.vault.adapter.basePath; // Get the Obsidian root directory
 
+// Resolve the template directory
+const resolvedTemplateDirectory = this.settings.templateDirectory === "/"
+    ? vaultPath
+    : path.join(vaultPath, this.settings.templateDirectory);
+
+// Resolve the template file
+const templateFilePath = this.settings.templateFileName
+    ? path.join(resolvedTemplateDirectory, this.settings.templateFileName)
+    : null;
+
+// Validate template file existence
+if (templateFilePath && !(await this.app.vault.adapter.exists(templateFilePath))) {
+    throw new Error(`Template file does not exist: ${templateFilePath}`);
+}
+
 // Resolve the directory path
 const resolvedDirectory = this.settings.fileDirectory === "/"
     ? vaultPath

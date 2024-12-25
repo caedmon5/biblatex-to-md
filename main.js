@@ -28763,7 +28763,7 @@ __export(main_exports, {
   default: () => BibLaTeXPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var path = __toESM(require("path"));
+var path2 = __toESM(require("path"));
 var import_obsidian2 = require("obsidian");
 
 // settings.ts
@@ -28775,8 +28775,12 @@ var DEFAULT_SETTINGS = {
   // Default is 5
   filePrefix: "",
   // Default to no prefix
-  fileDirectory: "/"
+  fileDirectory: "/",
   // Default to the root directory
+  templateDirectory: "/",
+  // default to obsidian root directory
+  templateFileName: ""
+  // default is no template filename
 };
 var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
   // Ideally, replace 'any' with the specific plugin type (BibLaTeXPlugin)
@@ -28789,13 +28793,29 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
-    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Specify the path to the template file for use with this plugin.").addText(
-      (text) => text.setPlaceholder("Enter template path").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
-        console.log("Template Path: " + value);
-        this.plugin.settings.templatePath = value;
+    new import_obsidian.Setting(containerEl).setName("Template Directory").setDesc("Specify the directory containing your templates.").addDropdown((dropdown) => {
+      const vaultPath = this.app.vault.adapter.basePath;
+      const folders = this.app.vault.getAllLoadedFiles().filter((f) => f.children).map((folder) => folder.path);
+      dropdown.addOption("/", "Vault Root");
+      folders.forEach((folder) => dropdown.addOption(folder, folder));
+      dropdown.setValue(this.plugin.settings.templateDirectory);
+      dropdown.onChange(async (value) => {
+        this.plugin.settings.templateDirectory = value;
         await this.plugin.saveSettings();
-      })
-    );
+      });
+    });
+    new import_obsidian.Setting(containerEl).setName("Template File").setDesc("Select a specific template file.").addDropdown((dropdown) => {
+      const vaultPath = this.app.vault.adapter.basePath;
+      const templateDir = path.join(vaultPath, this.plugin.settings.templateDirectory);
+      const files = this.app.vault.getAllLoadedFiles().filter((f) => f.path.startsWith(templateDir) && !f.children).map((file) => file.path);
+      dropdown.addOption("", "None");
+      files.forEach((file) => dropdown.addOption(file, file));
+      dropdown.setValue(this.plugin.settings.templateFileName);
+      dropdown.onChange(async (value) => {
+        this.plugin.settings.templateFileName = value;
+        await this.plugin.saveSettings();
+      });
+    });
     new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Specify the maximum number of entries to process from each BibTeX file (1 or more). Default is 5.").addText(
       (text) => text.setPlaceholder("e.g., 5 or 10000").setValue(String(this.plugin.settings.entryLimit)).onChange(async (value) => {
         console.log("Entry Limit (raw):", value);
@@ -29002,7 +29022,12 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           );
           const filePrefix = this.settings.filePrefix ? `${this.settings.filePrefix} ` : "";
           const vaultPath = this.app.vault.adapter.basePath;
-          const resolvedDirectory = this.settings.fileDirectory === "/" ? vaultPath : path.join(vaultPath, this.settings.fileDirectory);
+          const resolvedTemplateDirectory = this.settings.templateDirectory === "/" ? vaultPath : path2.join(vaultPath, this.settings.templateDirectory);
+          const templateFilePath = this.settings.templateFileName ? path2.join(resolvedTemplateDirectory, this.settings.templateFileName) : null;
+          if (templateFilePath && !await this.app.vault.adapter.exists(templateFilePath)) {
+            throw new Error(`Template file does not exist: ${templateFilePath}`);
+          }
+          const resolvedDirectory = this.settings.fileDirectory === "/" ? vaultPath : path2.join(vaultPath, this.settings.fileDirectory);
           const fileDirectory = resolvedDirectory.endsWith("/") ? resolvedDirectory : `${resolvedDirectory}/`;
           const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
