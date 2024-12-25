@@ -106,7 +106,7 @@ async importBibTeX() {
     return;
   }
 
-// Resolve the directory path for file creation
+  // Resolve the directory path for file creation
   const vaultPath = this.app.vault.adapter.basePath; // Get the Obsidian root directory
   const resolvedDirectory = path.resolve(
       vaultPath,
@@ -123,9 +123,10 @@ async importBibTeX() {
       await this.app.vault.createFolder(fileDirectory);
   }
 
+  // Add prefix if defined in settings
+  const filePrefix = this.settings.filePrefix ? `${this.settings.filePrefix} ` : "";
+
   // Template handling logic
-
-
   const coreTemplatesSettings = (this.app as any).internalPlugins.plugins["templates"]?.instance?.options;
   const coreTemplateFolder = coreTemplatesSettings?.folder;
   const templatePath = coreTemplateFolder
@@ -141,37 +142,38 @@ async importBibTeX() {
 
   const templateContent = await this.app.vault.read(templateFile);
 
-// Process files
-for (const file of files) {
-    try {
-        const content = await this.app.vault.read(file);
-        console.log(`Processing file: ${file.path}`);
-        console.log("File content:", content);
+  // Process files
+  for (const file of files) {
+      try {
+          const content = await this.app.vault.read(file);
+          console.log(`Processing file: ${file.path}`);
+          console.log("File content:", content);
 
-        const parsedResult = BibtexParser.parse(content);
-        const parsedEntries = parsedResult.entries;
-        console.log("Parsed entries:", parsedEntries);
+          const parsedResult = BibtexParser.parse(content);
+          const parsedEntries = parsedResult.entries;
+          console.log("Parsed entries:", parsedEntries);
 
-for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
-    const fields = entry.fields || {}; // Define fields for each entry
-    const title = fields.title || "Untitled";
-    const sanitizedTitle = this.sanitizeString(
-        title.split(/\s+/).slice(0, 4).join(" ")
-    );
+          for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
+              const fields = entry.fields || {}; // Define fields for each entry
+              const title = fields.title || "Untitled";
+              const sanitizedTitle = this.sanitizeString(
+                  title.split(/\s+/).slice(0, 4).join(" ")
+              );
 
-    const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
+              const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
 
-    // Write the file
-    await this.app.vault.create(fileName, populatedContent);
-    console.log(`Created Markdown file: ${fileName}`);
+              // Write the file
+              await this.app.vault.create(fileName, populatedContent);
+              console.log(`Created Markdown file: ${fileName}`);
+          }
+      } catch (error) {
+          console.error(`Error processing file ${file.path}:`, error);
+      }
+  }
+
+  new Notice("BibTeX entries imported successfully!");
 }
-    } catch (error) {
-        console.error(`Error processing file ${file.path}:`, error);
-    }
-}
 
-new Notice("BibTeX entries imported successfully!");
-}
 
 // Helper plugin method: buildAuthorTag
 buildAuthorTag(authorStr: string): string {

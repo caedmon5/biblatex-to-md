@@ -28941,6 +28941,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     if (!this.app.vault.getAbstractFileByPath(fileDirectory)) {
       await this.app.vault.createFolder(fileDirectory);
     }
+    const filePrefix = this.settings.filePrefix ? `${this.settings.filePrefix} ` : "";
     const coreTemplatesSettings = this.app.internalPlugins.plugins["templates"]?.instance?.options;
     const coreTemplateFolder = coreTemplatesSettings?.folder;
     const templatePath = coreTemplateFolder ? `${coreTemplateFolder}/bibtex-template.md` : this.settings.templatePath;
