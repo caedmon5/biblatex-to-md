@@ -15,8 +15,6 @@ export const DEFAULT_SETTINGS: BibLaTeXPluginSettings = {
     fileDirectory: "./", // Default to current directory
 };
 
-};
-
 // Create a settings tab for user configuration
 export class BibLaTeXPluginSettingTab extends PluginSettingTab {
   plugin: any; // Ideally, replace 'any' with the specific plugin type (BibLaTeXPlugin)

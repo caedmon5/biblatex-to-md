@@ -28759,8 +28759,12 @@ var import_obsidian2 = require("obsidian");
 var import_obsidian = require("obsidian");
 var DEFAULT_SETTINGS = {
   templatePath: "templates/bibtex-template.md",
-  entryLimit: 5
+  entryLimit: 5,
   // Default is 5
+  filePrefix: "",
+  // Default to no prefix
+  fileDirectory: "./"
+  // Default to current directory
 };
 var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
   // Ideally, replace 'any' with the specific plugin type (BibLaTeXPlugin)
@@ -28773,14 +28777,14 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
-    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Path to the template file for Markdown notes.").addText(
+    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Specify the path to the template file for use with this plugin.").addText(
       (text) => text.setPlaceholder("Enter template path").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
         console.log("Template Path: " + value);
         this.plugin.settings.templatePath = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Maximum number of entries to process from each BibTeX file (1 or more).").addText(
+    new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Specify the maximum number of entries to process from each BibTeX file (1 or more). Default is 5.").addText(
       (text) => text.setPlaceholder("e.g., 5 or 10000").setValue(String(this.plugin.settings.entryLimit)).onChange(async (value) => {
         console.log("Entry Limit (raw):", value);
         const parsedValue = parseInt(value, 10);
@@ -28788,6 +28792,18 @@ var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
           this.plugin.settings.entryLimit = parsedValue;
           await this.plugin.saveSettings();
         }
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("File Prefix").setDesc("Specify a prefix for file names (default = none).").addText(
+      (text) => text.setPlaceholder("e.g., Notes_").setValue(this.plugin.settings.filePrefix).onChange(async (value) => {
+        this.plugin.settings.filePrefix = value;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("File Directory").setDesc("Specify the directory for file creation (default is current).").addText(
+      (text) => text.setPlaceholder("e.g., /my/notes").setValue(this.plugin.settings.fileDirectory).onChange(async (value) => {
+        this.plugin.settings.fileDirectory = value;
+        await this.plugin.saveSettings();
       })
     );
   }
@@ -28964,8 +28980,12 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           if (!this.app.vault.getAbstractFileByPath(folderPath)) {
             await this.app.vault.createFolder(folderPath);
           }
-          const sanitizedTitle = this.sanitizeString(title);
-          const fileName = `LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
+          const truncatedTitle = this.sanitizeString(
+            title.split(/\s+/).slice(0, 4).join(" ")
+          );
+          const filePrefix = this.settings.filePrefix ? `${this.settings.filePrefix} ` : "";
+          const fileDirectory = this.settings.fileDirectory.endsWith("/") ? this.settings.fileDirectory : `${this.settings.fileDirectory}/`;
+          const fileName = `${fileDirectory}${filePrefix}LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
           console.log(`Created Markdown file: ${folderPath}/${fileName}`);
         }
