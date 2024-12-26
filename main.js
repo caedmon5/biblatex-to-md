@@ -28856,6 +28856,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
       });
       fileNameAuthor = authorTags.length > 1 ? `${authorTags[0].replace(/^#/, "")}_et_al` : authorTags[0].replace(/^#/, "");
     }
+    authorTags = [...new Set(authorTags)];
     return { authorTags, fileNameAuthor };
   }
   async importBibTeX() {
@@ -28888,7 +28889,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           const fields = entry.fields || {};
           const title = fields.title || "Untitled";
           const authorsRaw = fields.author || "Unknown Author";
-          const { authorTags, fileNameAuthor } = this.processAuthors(authorsRaw);
+          const { authorTags, fileNameAuthor } = this.processAuthors(fields.author || "Unknown Author");
           if (typeof authorsRaw === "string") {
             const cleaned = authorsRaw.replace(/[{}]/g, "");
             const authorSplits = cleaned.split(/\s+and\s+/i);

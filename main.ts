@@ -100,6 +100,7 @@ authorsRaw.forEach((a) => {
             : authorTags[0].replace(/^#/, "");
     }
 
+authorTags = [...new Set(authorTags)]; // Remove duplicates
     return { authorTags, fileNameAuthor };
 }
 
@@ -149,7 +150,7 @@ async importBibTeX() {
         // (1) AUTHOR TAGS => build an array like ["#FryeN", "#SmithJ"]
         //---------------------------------------------------
 const authorsRaw = fields.author || "Unknown Author";
-const { authorTags, fileNameAuthor } = this.processAuthors(authorsRaw);
+const { authorTags, fileNameAuthor } = this.processAuthors(fields.author || "Unknown Author");
 
         if (typeof authorsRaw === "string") {
           // Remove braces; split on " and "
