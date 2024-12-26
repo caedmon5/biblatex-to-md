@@ -48,18 +48,23 @@ export default class BibLaTeXPlugin extends Plugin {
  * Helper function to sanitize strings
  * Removes invalid characters for filenames, tags, and other uses.
  * @param {string} input - The string to sanitize.
+ * @param {boolean} preserveSpaces - Whether to preserve spaces (default: false).
  * @returns {string} Sanitized string.
  */
-sanitizeString(input: string): string {
-    return input
+sanitizeString(input: string, preserveSpaces: boolean = false): string {
+    let sanitized = input
         .replace(/[\/\\:*?"<>|]/g, "_") // Replace invalid filename characters
         .replace(/\./g, "_") // Replace periods with underscores
         .replace(/[()]/g, "") // Remove parentheses
-        .replace(/\s+/g, "_") // Replace spaces with underscores
-        .replace(/_+/g, "_") // Normalize consecutive underscores to single
         .trim(); // Remove leading/trailing whitespace
-}
 
+    if (!preserveSpaces) {
+        sanitized = sanitized.replace(/\s+/g, "_"); // Replace spaces with underscores
+    }
+
+    // Normalize consecutive underscores to single
+    return sanitized.replace(/_+/g, "_");
+}
 
 
 /**
@@ -85,9 +90,9 @@ processAuthors(authorsRaw) {
 const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
 authorTags.push(`#${tag}`);
         });
-        fileNameAuthor = authorSplits.length > 1
-            ? `${authorTags[0].replace(/^#/, "")}_et_al`
-            : authorTags[0].replace(/^#/, "");
+fileNameAuthor = authorSplits.length > 1
+    ? `${cleaned.split(",")[0]}_et_al` // Use only the last name for file titles
+    : `${cleaned.split(",")[0]}`;
     } else if (Array.isArray(authorsRaw)) {
 authorsRaw.forEach((a) => {
     const first = a.firstName || "";
@@ -239,9 +244,10 @@ tags: `["${combinedTags.join('","')}"]`,
 
         // Use first author tag (minus '#') in the file name
 
-// Truncate the title to the first four words and sanitize
+// Truncate the title to the first four words and sanitize for file names
 const truncatedTitle = this.sanitizeString(
-    title.split(/\s+/).slice(0, 4).join(" ")
+    title.split(/\s+/).slice(0, 4).join(" "),
+    true // Preserve spaces for file titles
 );
 
 const fileName = `LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
