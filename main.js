@@ -28839,7 +28839,8 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
   processAuthors(authorsRaw) {
     if (!authorsRaw || authorsRaw === "Unknown Author") {
       return {
-        authorTags: ["#UnknownAuthor"],
+        authorTags: [],
+        // no tags for unknown authors
         fileNameAuthor: "UnknownAuthor"
       };
     }
@@ -28865,6 +28866,11 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     authorTags = [...new Set(authorTags)];
     return { authorTags, fileNameAuthor };
   }
+  /** 
+   * Import BibTex function
+   *
+   *
+   */
   async importBibTeX() {
     const files = this.app.vault.getFiles().filter((file) => file.extension === "bib");
     console.log("Found .bib files:", files.map((file) => file.path));
