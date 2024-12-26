@@ -28818,12 +28818,12 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
   }
   /**
    * Helper function to sanitize strings
-   * Removes invalid characters for filenames or other uses.
+   * Removes invalid characters for filenames, tags, and other uses.
    * @param {string} input - The string to sanitize.
    * @returns {string} Sanitized string.
    */
   sanitizeString(input) {
-    return input.replace(/[\/\\:*?"<>|]/g, "_").trim();
+    return input.replace(/[\/\\:*?"<>|]/g, "_").replace(/\./g, "_").replace(/[()]/g, "").replace(/\s+/g, "_").replace(/_+/g, "_").trim();
   }
   /**
    * Helper function to process author names
@@ -28922,6 +28922,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             keywordArray = fields.keywords.map((kw) => `#${this.sanitizeString(String(kw))}`);
           }
           const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
+          const combinedTags = [...authorTags, ...keywordArray];
           const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
           const abstract = fields.abstract || "No abstract provided.";
           const journaltitle = fields.journaltitle || "Unknown Journal";
@@ -28949,8 +28950,9 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             // Insert the inline YAML arrays
             authors: authorsInlineArray,
             // for {{authors}} in the template
-            keywords: keywordsInlineArray
+            keywords: keywordsInlineArray,
             // for {{keywords}} in the template
+            tags: `["${combinedTags.join('","')}"]`
           };
           const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
             const val = replacements[key.trim()];

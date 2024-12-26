@@ -46,12 +46,18 @@ export default class BibLaTeXPlugin extends Plugin {
 
 /**
  * Helper function to sanitize strings
- * Removes invalid characters for filenames or other uses.
+ * Removes invalid characters for filenames, tags, and other uses.
  * @param {string} input - The string to sanitize.
  * @returns {string} Sanitized string.
  */
 sanitizeString(input: string): string {
-    return input.replace(/[\/\\:*?"<>|]/g, "_").trim();
+    return input
+        .replace(/[\/\\:*?"<>|]/g, "_") // Replace invalid filename characters
+        .replace(/\./g, "_") // Replace periods with underscores
+        .replace(/[()]/g, "") // Remove parentheses
+        .replace(/\s+/g, "_") // Replace spaces with underscores
+        .replace(/_+/g, "_") // Normalize consecutive underscores to single
+        .trim(); // Remove leading/trailing whitespace
 }
 
 
