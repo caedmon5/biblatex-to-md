@@ -28890,29 +28890,6 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           const title = fields.title || "Untitled";
           const authorsRaw = fields.author || "Unknown Author";
           const { authorTags, fileNameAuthor } = this.processAuthors(fields.author || "Unknown Author");
-          if (typeof authorsRaw === "string") {
-            const cleaned = authorsRaw.replace(/[{}]/g, "");
-            const authorSplits = cleaned.split(/\s+and\s+/i);
-            authorSplits.forEach((authorStr) => {
-              const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
-              authorTags.push(`#${tag}`);
-            });
-          } else if (Array.isArray(authorsRaw)) {
-            authorsRaw.forEach((a) => {
-              const first = a.firstName || "";
-              const last = a.lastName || "";
-              const combined = `${first} ${last}`.trim();
-              const tag = this.buildAuthorTag(combined);
-              authorTags.push(`#${tag}`);
-            });
-          } else if (typeof authorsRaw === "object") {
-            const first = authorsRaw.firstName || "";
-            const last = authorsRaw.lastName || "";
-            const combined = `${first} ${last}`.trim();
-            authorTags.push(`#${this.buildAuthorTag(combined)}`);
-          } else {
-            authorTags.push("#UnknownAuthor");
-          }
           const authorsInlineArray = `["${authorTags.join('","')}"]`;
           let keywordArray = [];
           if (typeof fields.keywords === "string" && fields.keywords.trim()) {

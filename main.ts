@@ -152,35 +152,6 @@ async importBibTeX() {
 const authorsRaw = fields.author || "Unknown Author";
 const { authorTags, fileNameAuthor } = this.processAuthors(fields.author || "Unknown Author");
 
-        if (typeof authorsRaw === "string") {
-          // Remove braces; split on " and "
-          const cleaned = authorsRaw.replace(/[{}]/g, "");
-          const authorSplits = cleaned.split(/\s+and\s+/i);
-
-          authorSplits.forEach((authorStr) => {
-const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
-            authorTags.push(`#${tag}`);
-          });
-        } else if (Array.isArray(authorsRaw)) {
-          // e.g. [{ firstName: 'Northrup', lastName: 'Frye' }, ...]
-          authorsRaw.forEach((a) => {
-            const first = a.firstName || "";
-            const last = a.lastName || "";
-            const combined = `${first} ${last}`.trim();
-            const tag = this.buildAuthorTag(combined);
-            authorTags.push(`#${tag}`);
-          });
-        } else if (typeof authorsRaw === "object") {
-          // Single object
-          const first = authorsRaw.firstName || "";
-          const last = authorsRaw.lastName || "";
-          const combined = `${first} ${last}`.trim();
-          authorTags.push(`#${this.buildAuthorTag(combined)}`);
-        } else {
-          // Fallback
-          authorTags.push("#UnknownAuthor");
-        }
-
         // We'll store them as a single-line YAML array: ["#FryeN","#SmithJ"]
         const authorsInlineArray = `["${authorTags.join('","')}"]`;
 
