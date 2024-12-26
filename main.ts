@@ -102,7 +102,7 @@ authorsRaw.forEach((a) => {
     authorTags.push(`#${tag}`);
 });
         fileNameAuthor = authorTags.length > 1
-            ? `${authorTags[0].replace(/^#/, "")}_et_al`
+            ? `${authorTags[0].replace(/^#/, "")} et al` // removed underscores here, as I don't think they are necessary anywhere.
             : authorTags[0].replace(/^#/, "");
     }
 

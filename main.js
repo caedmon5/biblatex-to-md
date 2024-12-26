@@ -28860,7 +28860,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
         const tag = this.sanitizeString(`${last}${first[0] || ""}`);
         authorTags.push(`#${tag}`);
       });
-      fileNameAuthor = authorTags.length > 1 ? `${authorTags[0].replace(/^#/, "")}_et_al` : authorTags[0].replace(/^#/, "");
+      fileNameAuthor = authorTags.length > 1 ? `${authorTags[0].replace(/^#/, "")} et al` : authorTags[0].replace(/^#/, "");
     }
     authorTags = [...new Set(authorTags)];
     return { authorTags, fileNameAuthor };
