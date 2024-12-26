@@ -28843,14 +28843,16 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
       const cleaned = authorsRaw.replace(/[{}]/g, "");
       const authorSplits = cleaned.split(/\s+and\s+/i);
       authorSplits.forEach((authorStr) => {
-        const lastNameOnly = authorStr.trim().split(",")[0].trim();
-        authorTags.push(`#${lastNameOnly}`);
+        const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
+        authorTags.push(`#${tag}`);
       });
       fileNameAuthor = authorSplits.length > 1 ? `${authorTags[0].replace(/^#/, "")}_et_al` : authorTags[0].replace(/^#/, "");
     } else if (Array.isArray(authorsRaw)) {
       authorsRaw.forEach((a) => {
+        const first = a.firstName || "";
         const last = a.lastName || "Unknown";
-        authorTags.push(`#${last}`);
+        const tag = this.sanitizeString(`${last}${first[0] || ""}`);
+        authorTags.push(`#${tag}`);
       });
       fileNameAuthor = authorTags.length > 1 ? `${authorTags[0].replace(/^#/, "")}_et_al` : authorTags[0].replace(/^#/, "");
     }
