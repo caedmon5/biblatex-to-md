@@ -28964,8 +28964,10 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           if (!this.app.vault.getAbstractFileByPath(folderPath)) {
             await this.app.vault.createFolder(folderPath);
           }
-          const sanitizedTitle = this.sanitizeString(title);
-          const fileName = `LNL ${fileNameAuthor} ${year} ${sanitizedTitle}.md`;
+          const truncatedTitle = this.sanitizeString(
+            title.split(/\s+/).slice(0, 4).join(" ")
+          );
+          const fileName = `LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
           console.log(`Created Markdown file: ${folderPath}/${fileName}`);
         }

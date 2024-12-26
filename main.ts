@@ -193,6 +193,13 @@ keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(Strin
         }
         const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
 
+//---------------------------------------------------
+// Combine Tags => create a single tags array for Obsidian
+//---------------------------------------------------
+const combinedTags = [...authorTags, ...keywordArray];
+
+
+
         //---------------------------------------------------
         // (3) Other fields
         //---------------------------------------------------
@@ -226,6 +233,10 @@ keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(Strin
           // Insert the inline YAML arrays
           authors: authorsInlineArray,   // for {{authors}} in the template
           keywords: keywordsInlineArray, // for {{keywords}} in the template
+
+tags: `["${combinedTags.join('","')}"]`,
+
+
         };
 
         // Replace placeholders in the template
