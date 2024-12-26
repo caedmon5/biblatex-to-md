@@ -49,21 +49,22 @@ export default class BibLaTeXPlugin extends Plugin {
  * Removes invalid characters for filenames, tags, and other uses.
  * @param {string} input - The string to sanitize.
  * @param {boolean} preserveSpaces - Whether to preserve spaces (default: false).
+ * @param {boolean} forTags - Whether the string is being sanitized for tags (default: false).
  * @returns {string} Sanitized string.
  */
-sanitizeString(input: string, preserveSpaces: boolean = false): string {
+sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean = false): string {
     let sanitized = input
-        .replace(/[\/\\:*?"<>|]/g, "_") // Replace invalid filename characters
+        .replace(/[\/\\:*?"<>|]/g, "") // Remove invalid characters
         .replace(/\./g, "_") // Replace periods with underscores
         .replace(/[()]/g, "") // Remove parentheses
         .trim(); // Remove leading/trailing whitespace
 
     if (!preserveSpaces) {
-        sanitized = sanitized.replace(/\s+/g, "_"); // Replace spaces with underscores
+        sanitized = sanitized.replace(/\s+/g, forTags ? "_" : " "); // Replace spaces with underscores for tags, keep spaces for titles
     }
 
-    // Normalize consecutive underscores to single
-    return sanitized.replace(/_+/g, "_");
+    // Normalize consecutive underscores to single (tags only)
+    return forTags ? sanitized.replace(/_+/g, "_") : sanitized;
 }
 
 
@@ -91,7 +92,7 @@ const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
 authorTags.push(`#${tag}`);
         });
 fileNameAuthor = authorSplits.length > 1
-    ? `${cleaned.split(",")[0]}_et_al` // Use only the last name for file titles
+    ? `${cleaned.split(",")[0]} et al` // Use only the last name for file titles
     : `${cleaned.split(",")[0]}`;
     } else if (Array.isArray(authorsRaw)) {
 authorsRaw.forEach((a) => {
@@ -244,9 +245,9 @@ tags: `["${combinedTags.join('","')}"]`,
 
         // Use first author tag (minus '#') in the file name
 
-// Truncate the title to the first four words and sanitize for file names
+// Truncate the title to the first three words and sanitize for file names
 const truncatedTitle = this.sanitizeString(
-    title.split(/\s+/).slice(0, 4).join(" "),
+    title.split(/\s+/).slice(0, 3).join(" "),
     true // Preserve spaces for file titles
 );
 

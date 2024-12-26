@@ -28820,10 +28820,16 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
    * Helper function to sanitize strings
    * Removes invalid characters for filenames, tags, and other uses.
    * @param {string} input - The string to sanitize.
+   * @param {boolean} preserveSpaces - Whether to preserve spaces (default: false).
+   * @param {boolean} forTags - Whether the string is being sanitized for tags (default: false).
    * @returns {string} Sanitized string.
    */
-  sanitizeString(input) {
-    return input.replace(/[\/\\:*?"<>|]/g, "_").replace(/\./g, "_").replace(/[()]/g, "").replace(/\s+/g, "_").replace(/_+/g, "_").trim();
+  sanitizeString(input, preserveSpaces = false, forTags = false) {
+    let sanitized = input.replace(/[\/\\:*?"<>|]/g, "").replace(/\./g, "_").replace(/[()]/g, "").trim();
+    if (!preserveSpaces) {
+      sanitized = sanitized.replace(/\s+/g, forTags ? "_" : " ");
+    }
+    return forTags ? sanitized.replace(/_+/g, "_") : sanitized;
   }
   /**
    * Helper function to process author names
@@ -28846,7 +28852,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
         const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
         authorTags.push(`#${tag}`);
       });
-      fileNameAuthor = authorSplits.length > 1 ? `${authorTags[0].replace(/^#/, "")}_et_al` : authorTags[0].replace(/^#/, "");
+      fileNameAuthor = authorSplits.length > 1 ? `${cleaned.split(",")[0]} et al` : `${cleaned.split(",")[0]}`;
     } else if (Array.isArray(authorsRaw)) {
       authorsRaw.forEach((a) => {
         const first = a.firstName || "";
@@ -28947,7 +28953,9 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             await this.app.vault.createFolder(folderPath);
           }
           const truncatedTitle = this.sanitizeString(
-            title.split(/\s+/).slice(0, 4).join(" ")
+            title.split(/\s+/).slice(0, 3).join(" "),
+            true
+            // Preserve spaces for file titles
           );
           const fileName = `LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
