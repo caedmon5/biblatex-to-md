@@ -28832,39 +28832,50 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     return forTags ? sanitized.replace(/_+/g, "_") : sanitized;
   }
   /**
-   * Helper function to process author names
-   * @param {Array|Object|string} authorsRaw - Raw authors data
-   * @returns {Object} Object with formatted tags and filenames
+   * Helper function to parse BibTeX authors into a normalized format
+   * @param {string | Array | Object} authorsRaw - Raw authors data from BibTeX
+   * @returns {Array<{ lastName: string, firstName: string }>} Array of parsed authors
    */
-  processAuthors(authorsRaw) {
-    if (!authorsRaw || authorsRaw === "Unknown Author") {
-      return {
-        authorTags: [],
-        // no tags for unknown authors
-        fileNameAuthor: "UnknownAuthor"
-      };
-    }
-    let authorTags = [];
-    let fileNameAuthor = "";
+  parseAuthors(authorsRaw) {
+    const parsedAuthors = [];
     if (typeof authorsRaw === "string") {
       const cleaned = authorsRaw.replace(/[{}]/g, "");
       const authorSplits = cleaned.split(/\s+and\s+/i);
       authorSplits.forEach((authorStr) => {
-        const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
-        authorTags.push(`#${tag}`);
+        const [last, first] = authorStr.includes(",") ? authorStr.split(",").map((s) => s.trim()) : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")];
+        parsedAuthors.push({ lastName: last, firstName: first });
       });
-      fileNameAuthor = authorSplits.length > 1 ? `${cleaned.split(",")[0]} et al` : `${cleaned.split(",")[0]}`;
     } else if (Array.isArray(authorsRaw)) {
-      authorsRaw.forEach((a) => {
-        const first = a.firstName || "";
-        const last = a.lastName || "Unknown";
-        const tag = this.sanitizeString(`${last}${first[0] || ""}`);
-        authorTags.push(`#${tag}`);
+      authorsRaw.forEach((author) => {
+        parsedAuthors.push({
+          lastName: author.lastName || "Unknown",
+          firstName: author.firstName || ""
+        });
       });
-      fileNameAuthor = authorTags.length > 1 ? `${authorTags[0].replace(/^#/, "")} et al` : authorTags[0].replace(/^#/, "");
+    } else if (typeof authorsRaw === "object" && authorsRaw.lastName) {
+      parsedAuthors.push({
+        lastName: authorsRaw.lastName || "Unknown",
+        firstName: authorsRaw.firstName || ""
+      });
     }
-    authorTags = [...new Set(authorTags)];
-    return { authorTags, fileNameAuthor };
+    return parsedAuthors;
+  }
+  /**
+   * Helper function to process author names
+   * @param {string | Array | Object} authorsRaw - Raw authors data
+   * @returns {Object} Object with formatted tags, file name author, and YAML authors
+   */
+  processAuthors(authorsRaw) {
+    const parsedAuthors = this.parseAuthors(authorsRaw);
+    const authorTags = [];
+    const authorsYaml = [];
+    parsedAuthors.forEach(({ lastName, firstName }) => {
+      const sanitizedTag = this.sanitizeString(`${lastName}${firstName[0] || ""}`);
+      authorTags.push(`#${sanitizedTag}`);
+      authorsYaml.push(`${lastName}, ${firstName}`);
+    });
+    const fileNameAuthor = parsedAuthors.length > 1 ? `${parsedAuthors[0].lastName} et al` : parsedAuthors[0].lastName;
+    return { authorTags: [...new Set(authorTags)], fileNameAuthor, authorsYaml: authorsYaml.join("; ") };
   }
   /** 
    * Import BibTex function
@@ -28901,7 +28912,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           const fields = entry.fields || {};
           const title = fields.title || "Untitled";
           const authorsRaw = fields.author || "Unknown Author";
-          const { authorTags, fileNameAuthor } = this.processAuthors(fields.author || "Unknown Author");
+          const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.author || "Unknown Author");
           const authorsInlineArray = `["${authorTags.join('","')}"]`;
           let keywordArray = [];
           if (typeof fields.keywords === "string" && fields.keywords.trim()) {
@@ -28940,8 +28951,8 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             zoteroLink: url,
             conditionalFields: "",
             // Insert the inline YAML arrays
-            authors: authorsInlineArray,
-            // for {{authors}} in the template
+            authors: authorsYaml,
+            // For the "Authors" line in the YAML
             keywords: keywordsInlineArray,
             // for {{keywords}} in the template
             tags: `["${combinedTags.join('","')}"]`

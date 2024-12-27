@@ -67,48 +67,64 @@ sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean 
     return forTags ? sanitized.replace(/_+/g, "_") : sanitized;
 }
 
+/**
+ * Helper function to parse BibTeX authors into a normalized format
+ * @param {string | Array | Object} authorsRaw - Raw authors data from BibTeX
+ * @returns {Array<{ lastName: string, firstName: string }>} Array of parsed authors
+ */
+parseAuthors(authorsRaw: string | Array<any> | Object): Array<{ lastName: string; firstName: string }> {
+    const parsedAuthors: Array<{ lastName: string; firstName: string }> = [];
+
+    if (typeof authorsRaw === "string") {
+        const cleaned = authorsRaw.replace(/[{}]/g, ""); // Remove braces
+        const authorSplits = cleaned.split(/\s+and\s+/i); // Split on "and"
+        authorSplits.forEach((authorStr) => {
+            const [last, first] = authorStr.includes(",")
+                ? authorStr.split(",").map((s) => s.trim()) // Format: "Last, First"
+                : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")]; // Format: "First Last"
+            parsedAuthors.push({ lastName: last, firstName: first });
+        });
+    } else if (Array.isArray(authorsRaw)) {
+        authorsRaw.forEach((author) => {
+            parsedAuthors.push({
+                lastName: author.lastName || "Unknown",
+                firstName: author.firstName || "",
+            });
+        });
+    } else if (typeof authorsRaw === "object" && authorsRaw.lastName) {
+        parsedAuthors.push({
+            lastName: authorsRaw.lastName || "Unknown",
+            firstName: authorsRaw.firstName || "",
+        });
+    }
+
+    return parsedAuthors;
+}
+
 
 /**
  * Helper function to process author names
- * @param {Array|Object|string} authorsRaw - Raw authors data
- * @returns {Object} Object with formatted tags and filenames
+ * @param {string | Array | Object} authorsRaw - Raw authors data
+ * @returns {Object} Object with formatted tags, file name author, and YAML authors
  */
-processAuthors(authorsRaw) {
-    if (!authorsRaw || authorsRaw === "Unknown Author") {
-        return {
-            authorTags: [], // no tags for unknown authors
-            fileNameAuthor: "UnknownAuthor"
-        };
-    }
-	// start by emptying things
-    let authorTags = [];
-    let fileNameAuthor = "";
+processAuthors(authorsRaw: string | Array<any> | Object) {
+    const parsedAuthors = this.parseAuthors(authorsRaw); // Normalize authors
+    const authorTags: string[] = [];
+    const authorsYaml: string[] = [];
 
-    if (typeof authorsRaw === "string") {
-        const cleaned = authorsRaw.replace(/[{}]/g, ""); // get rid of surrounding braces, etc.
-        const authorSplits = cleaned.split(/\s+and\s+/i);  // Splits multiple authors
-        authorSplits.forEach((authorStr) => {
-		const tag = this.buildAuthorTag(this.sanitizeString(authorStr.trim()));
-		authorTags.push(`#${tag}`);
-        });
-	fileNameAuthor = authorSplits.length > 1  // I THINK THE PROBLEM WITH THE AUTHOR NAME IN FILE NAMES IS HERE. iT LOOKS LIKE IT IS USING THE AUTHOR TAG AND IN THE NEXT SECTION BUILDING IT WITH LASTNAMEFIRSTINITIAL
-	    ? `${cleaned.split(",")[0]} et al` // Use only the last name for file titles
-	    : `${cleaned.split(",")[0]}`;
-	    } else if (Array.isArray(authorsRaw)) {
-		authorsRaw.forEach((a) => {
-		    const first = a.firstName || "";
-		    const last = a.lastName || "Unknown";
-		    const tag = this.sanitizeString(`${last}${first[0] || ""}`);
-		    authorTags.push(`#${tag}`);
-		});
-        fileNameAuthor = authorTags.length > 1
-            ? `${authorTags[0].replace(/^#/, "")} et al` // removed underscores here, as I don't think they are necessary anywhere.
-            : authorTags[0].replace(/^#/, "");
-	    }
+    parsedAuthors.forEach(({ lastName, firstName }) => {
+        const sanitizedTag = this.sanitizeString(`${lastName}${firstName[0] || ""}`);
+        authorTags.push(`#${sanitizedTag}`); // Tags: LastnameFirstInitial
+        authorsYaml.push(`${lastName}, ${firstName}`); // YAML: Lastname, First
+    });
 
-	authorTags = [...new Set(authorTags)]; // Remove duplicates
-	    return { authorTags, fileNameAuthor };
-	}
+    const fileNameAuthor = parsedAuthors.length > 1
+        ? `${parsedAuthors[0].lastName} et al` // Use only the first author for file names
+        : parsedAuthors[0].lastName; // Single author: just the last name
+
+    return { authorTags: [...new Set(authorTags)], fileNameAuthor, authorsYaml: authorsYaml.join("; ") };
+}
+
 
 /** 
  * Import BibTex function
@@ -162,7 +178,7 @@ processAuthors(authorsRaw) {
         // (1) AUTHOR TAGS => build an array like ["#FryeN", "#SmithJ"]
         //---------------------------------------------------
 	const authorsRaw = fields.author || "Unknown Author";
-	const { authorTags, fileNameAuthor } = this.processAuthors(fields.author || "Unknown Author");
+const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.author || "Unknown Author");
 
         // We'll store them as a single-line YAML array: ["#FryeN","#SmithJ"]
         const authorsInlineArray = `["${authorTags.join('","')}"]`;
@@ -223,7 +239,7 @@ processAuthors(authorsRaw) {
           conditionalFields: "",
 
           // Insert the inline YAML arrays
-          authors: authorsInlineArray,   // for {{authors}} in the template
+authors: authorsYaml, // For the "Authors" line in the YAML
           keywords: keywordsInlineArray, // for {{keywords}} in the template
 
 	tags: `["${combinedTags.join('","')}"]`,
