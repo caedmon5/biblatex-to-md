@@ -77,13 +77,17 @@ parseAuthors(authorsRaw: string | Array<any> | Object): Array<{ lastName: string
 
     if (typeof authorsRaw === "string") {
         const cleaned = authorsRaw.replace(/[{}]/g, ""); // Remove braces
-        const authorSplits = cleaned.split(/\s+and\s+/i); // Split on "and"
-        authorSplits.forEach((authorStr) => {
-            const [last, first] = authorStr.includes(",")
-                ? authorStr.split(",").map((s) => s.trim()) // Format: "Last, First"
-                : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")]; // Format: "First Last"
-            parsedAuthors.push({ lastName: last, firstName: first });
-        });
+const authorSplits = cleaned.split(/\s+and\s+/i); // Split on "and"
+authorSplits.forEach((authorStr) => {
+    if (authorStr.trim().startsWith("{") && authorStr.trim().endsWith("}")) {
+        parsedAuthors.push({ lastName: authorStr.trim().replace(/[{}]/g, ""), firstName: "" }); // Corporate author
+    } else {
+        const [last, first] = authorStr.includes(",")
+            ? authorStr.split(",").map((s) => s.trim()) // Format: "Last, First"
+            : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")]; // Format: "First Last"
+        parsedAuthors.push({ lastName: last, firstName: first });
+    }
+});
     } else if (Array.isArray(authorsRaw)) {
         authorsRaw.forEach((author) => {
             parsedAuthors.push({
@@ -186,20 +190,23 @@ const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.a
         //---------------------------------------------------
         // (2) KEYWORD TAGS => build an array like ["#Anglo_Saxon", "#Old_English"]
         //---------------------------------------------------
-        let keywordArray: string[] = [];
-        if (typeof fields.keywords === "string" && fields.keywords.trim()) {
-          // Remove any braces just in case
-          const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
-          if (cleaned) {
-            // Split on commas
-            const splitted = cleaned.split(",").map((k) => k.trim());
-            keywordArray = splitted.map((kw) => `#${kw.replace(/\s+/g, "_")}`);
-          }
-        } else if (Array.isArray(fields.keywords)) {
-          // If the parser returns an array
-	keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(String(kw))}`);
-        }
-        const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
+let keywordsHuman: string[] = [];
+let keywordArray: string[] = []; // For tags
+
+if (typeof fields.keywords === "string" && fields.keywords.trim()) {
+    const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
+    if (cleaned) {
+        const splitted = cleaned.split(",").map((k) => k.trim());
+        keywordsHuman = splitted; // Human-readable for YAML
+        keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw)}`); // Tags
+    }
+} else if (Array.isArray(fields.keywords)) {
+    keywordsHuman = fields.keywords.map((kw: string) => String(kw));
+    keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(String(kw))}`);
+}
+
+// Generate human-readable and tag formats
+const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
 
 	//---------------------------------------------------
 	// Combine Tags => create a single tags array for Obsidian
@@ -240,9 +247,8 @@ const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.a
 
           // Insert the inline YAML arrays
 authors: authorsYaml, // For the "Authors" line in the YAML
-          keywords: keywordsInlineArray, // for {{keywords}} in the template
-
-	tags: `["${combinedTags.join('","')}"]`,
+keywords: keywordsHuman.join(", "), // Human-readable for YAML
+tags: `["${[...authorTags, ...keywordArray].join('","')}"]`, // Combined author tags and keyword tags
         };
 
         // Replace placeholders in the template

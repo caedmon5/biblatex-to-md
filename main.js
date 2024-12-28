@@ -28842,8 +28842,12 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
       const cleaned = authorsRaw.replace(/[{}]/g, "");
       const authorSplits = cleaned.split(/\s+and\s+/i);
       authorSplits.forEach((authorStr) => {
-        const [last, first] = authorStr.includes(",") ? authorStr.split(",").map((s) => s.trim()) : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")];
-        parsedAuthors.push({ lastName: last, firstName: first });
+        if (authorStr.trim().startsWith("{") && authorStr.trim().endsWith("}")) {
+          parsedAuthors.push({ lastName: authorStr.trim().replace(/[{}]/g, ""), firstName: "" });
+        } else {
+          const [last, first] = authorStr.includes(",") ? authorStr.split(",").map((s) => s.trim()) : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")];
+          parsedAuthors.push({ lastName: last, firstName: first });
+        }
       });
     } else if (Array.isArray(authorsRaw)) {
       authorsRaw.forEach((author) => {
@@ -28914,14 +28918,17 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           const authorsRaw = fields.author || "Unknown Author";
           const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.author || "Unknown Author");
           const authorsInlineArray = `["${authorTags.join('","')}"]`;
+          let keywordsHuman = [];
           let keywordArray = [];
           if (typeof fields.keywords === "string" && fields.keywords.trim()) {
             const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
             if (cleaned) {
               const splitted = cleaned.split(",").map((k) => k.trim());
-              keywordArray = splitted.map((kw) => `#${kw.replace(/\s+/g, "_")}`);
+              keywordsHuman = splitted;
+              keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw)}`);
             }
           } else if (Array.isArray(fields.keywords)) {
+            keywordsHuman = fields.keywords.map((kw) => String(kw));
             keywordArray = fields.keywords.map((kw) => `#${this.sanitizeString(String(kw))}`);
           }
           const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
@@ -28953,9 +28960,10 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             // Insert the inline YAML arrays
             authors: authorsYaml,
             // For the "Authors" line in the YAML
-            keywords: keywordsInlineArray,
-            // for {{keywords}} in the template
-            tags: `["${combinedTags.join('","')}"]`
+            keywords: keywordsHuman.join(", "),
+            // Human-readable for YAML
+            tags: `["${[...authorTags, ...keywordArray].join('","')}"]`
+            // Combined author tags and keyword tags
           };
           const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
             const val = replacements[key.trim()];
