@@ -140,6 +140,38 @@ authorsYaml.push(yamlAuthor);
 }
 
 
+/**
+ * Generate a file name based on provided metadata.
+ * This function constructs a file name by combining authors, year, and title,
+ * while adhering to fallback rules for missing data. If all metadata is missing,
+ * it uses a default pattern with a timestamp.
+ *
+ * @param {Record<string, string | undefined>} metadata - An object containing authors, year, title, and shorttitle.
+ * @param {string} dateStamp - A timestamp in the format "YYYY-MM-DD HH:MM" to use as a fallback.
+ * @returns {string} - The generated file name.
+ */
+generateFileName(metadata: Record<string, string | undefined>, dateStamp: string): string {
+    const authors = metadata.authors || ""; // Processed author string
+    const year = metadata.year || "";       // Year if available
+    const title = metadata.title || metadata.shorttitle || ""; // Title or short title
+
+    // Build the title components
+    const components: string[] = [];
+    if (authors) components.push(authors);
+    if (year) components.push(year);
+    if (title) components.push(this.sanitizeString(title));
+
+    // If no meaningful components, use fallback
+    if (components.length === 0) {
+        return `LNL ${dateStamp}`;
+    }
+
+    return components.join(" ");
+}
+
+
+
+
 /** 
  * Import BibTex function
  *

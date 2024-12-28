@@ -28886,6 +28886,29 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     const fileNameAuthor = parsedAuthors.length > 1 ? `${parsedAuthors[0].lastName} et al` : parsedAuthors[0].lastName;
     return { authorTags: [...new Set(authorTags)], fileNameAuthor, authorsYaml: authorsYaml.join("; ") };
   }
+  /**
+   * Generate a file name based on provided metadata.
+   * This function constructs a file name by combining authors, year, and title,
+   * while adhering to fallback rules for missing data. If all metadata is missing,
+   * it uses a default pattern with a timestamp.
+   *
+   * @param {Record<string, string | undefined>} metadata - An object containing authors, year, title, and shorttitle.
+   * @param {string} dateStamp - A timestamp in the format "YYYY-MM-DD HH:MM" to use as a fallback.
+   * @returns {string} - The generated file name.
+   */
+  generateFileName(metadata, dateStamp) {
+    const authors = metadata.authors || "";
+    const year = metadata.year || "";
+    const title = metadata.title || metadata.shorttitle || "";
+    const components = [];
+    if (authors) components.push(authors);
+    if (year) components.push(year);
+    if (title) components.push(this.sanitizeString(title));
+    if (components.length === 0) {
+      return `LNL ${dateStamp}`;
+    }
+    return components.join(" ");
+  }
   /** 
    * Import BibTex function
    *
