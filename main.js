@@ -28829,6 +28829,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     if (!preserveSpaces) {
       sanitized = sanitized.replace(/\s+/g, forTags ? "_" : " ");
     }
+    sanitized = sanitized.replace(/_+$/g, "");
     return forTags ? sanitized.replace(/_+/g, "_") : sanitized;
   }
   /**

@@ -63,6 +63,9 @@ sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean 
         sanitized = sanitized.replace(/\s+/g, forTags ? "_" : " "); // Replace spaces with underscores for tags, keep spaces for titles
     }
 
+    // Remove trailing underscores that may result from parentheses
+    sanitized = sanitized.replace(/_+$/g, "");
+
     // Normalize consecutive underscores to single (tags only)
     return forTags ? sanitized.replace(/_+/g, "_") : sanitized;
 }
