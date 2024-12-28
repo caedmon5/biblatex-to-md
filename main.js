@@ -28825,7 +28825,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
    * @returns {string} Sanitized string.
    */
   sanitizeString(input, preserveSpaces = false, forTags = false) {
-    let sanitized = input.replace(/[\/\\:*?"<>|]/g, "").replace(/\./g, "_").replace(/[()]/g, "").trim();
+    let sanitized = input.replace(/[\/\\:*?"<>|]/g, "").replace(/\./g, "_").replace(/[()]/g, "_").trim();
     if (!preserveSpaces) {
       sanitized = sanitized.replace(/\s+/g, forTags ? "_" : " ");
     }
@@ -28842,8 +28842,9 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
       const cleaned = authorsRaw.replace(/[{}]/g, "");
       const authorSplits = cleaned.split(/\s+and\s+/i);
       authorSplits.forEach((authorStr) => {
-        if (authorStr.trim().startsWith("{") && authorStr.trim().endsWith("}")) {
-          parsedAuthors.push({ lastName: authorStr.trim().replace(/[{}]/g, ""), firstName: "" });
+        if (authorStr.trim().length === 0) return;
+        if (!authorStr.includes(",") && cleaned.startsWith("{")) {
+          parsedAuthors.push({ lastName: cleaned.trim(), firstName: "" });
         } else {
           const [last, first] = authorStr.includes(",") ? authorStr.split(",").map((s) => s.trim()) : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")];
           parsedAuthors.push({ lastName: last, firstName: first });
@@ -28925,11 +28926,11 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             if (cleaned) {
               const splitted = cleaned.split(",").map((k) => k.trim());
               keywordsHuman = splitted;
-              keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw)}`);
+              keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw, false, true)}`);
             }
           } else if (Array.isArray(fields.keywords)) {
             keywordsHuman = fields.keywords.map((kw) => String(kw));
-            keywordArray = fields.keywords.map((kw) => `#${this.sanitizeString(String(kw))}`);
+            keywordArray = fields.keywords.map((kw) => `#${this.sanitizeString(String(kw), false, true)}`);
           }
           const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
           const combinedTags = [...authorTags, ...keywordArray];

@@ -56,7 +56,7 @@ sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean 
     let sanitized = input
         .replace(/[\/\\:*?"<>|]/g, "") // Remove invalid characters
         .replace(/\./g, "_") // Replace periods with underscores
-        .replace(/[()]/g, "") // Remove parentheses
+.replace(/[()]/g, "_") // Replace parentheses with underscores to preserve grouping
         .trim(); // Remove leading/trailing whitespace
 
     if (!preserveSpaces) {
@@ -75,19 +75,21 @@ sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean 
 parseAuthors(authorsRaw: string | Array<any> | Object): Array<{ lastName: string; firstName: string }> {
     const parsedAuthors: Array<{ lastName: string; firstName: string }> = [];
 
-    if (typeof authorsRaw === "string") {
-        const cleaned = authorsRaw.replace(/[{}]/g, ""); // Remove braces
-const authorSplits = cleaned.split(/\s+and\s+/i); // Split on "and"
-authorSplits.forEach((authorStr) => {
-    if (authorStr.trim().startsWith("{") && authorStr.trim().endsWith("}")) {
-        parsedAuthors.push({ lastName: authorStr.trim().replace(/[{}]/g, ""), firstName: "" }); // Corporate author
-    } else {
-        const [last, first] = authorStr.includes(",")
-            ? authorStr.split(",").map((s) => s.trim()) // Format: "Last, First"
-            : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")]; // Format: "First Last"
-        parsedAuthors.push({ lastName: last, firstName: first });
-    }
-});
+if (typeof authorsRaw === "string") {
+    const cleaned = authorsRaw.replace(/[{}]/g, ""); // Remove braces
+    const authorSplits = cleaned.split(/\s+and\s+/i);
+    authorSplits.forEach((authorStr) => {
+        if (authorStr.trim().length === 0) return; // Skip empty strings
+        if (!authorStr.includes(",") && cleaned.startsWith("{")) {
+            // Handle corporate authors
+            parsedAuthors.push({ lastName: cleaned.trim(), firstName: "" });
+        } else {
+            const [last, first] = authorStr.includes(",")
+                ? authorStr.split(",").map((s) => s.trim()) // Format: "Last, First"
+                : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")]; // Format: "First Last"
+            parsedAuthors.push({ lastName: last, firstName: first });
+        }
+    });
     } else if (Array.isArray(authorsRaw)) {
         authorsRaw.forEach((author) => {
             parsedAuthors.push({
@@ -198,11 +200,11 @@ if (typeof fields.keywords === "string" && fields.keywords.trim()) {
     if (cleaned) {
         const splitted = cleaned.split(",").map((k) => k.trim());
         keywordsHuman = splitted; // Human-readable for YAML
-        keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw)}`); // Tags
+        keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw, false, true)}`); // Tags
     }
 } else if (Array.isArray(fields.keywords)) {
     keywordsHuman = fields.keywords.map((kw: string) => String(kw));
-    keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(String(kw))}`);
+    keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(String(kw), false, true)}`); // Tags
 }
 
 // Generate human-readable and tag formats
