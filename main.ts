@@ -78,23 +78,23 @@ sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean 
 parseAuthors(authorsRaw: string | Array<any> | Object): Array<{ lastName: string; firstName: string }> {
     const parsedAuthors: Array<{ lastName: string; firstName: string }> = [];
 
-if (typeof authorsRaw === "string") {
-    const cleaned = authorsRaw.replace(/[{}]/g, "").trim(); // Remove braces
-    const authorSplits = cleaned.split(/\s+and\s+/i);
+    if (typeof authorsRaw === "string") {
+        const cleaned = authorsRaw.replace(/[{}]/g, "").trim(); // Remove braces
+        const authorSplits = cleaned.split(/\s+and\s+/i);
 
-    authorSplits.forEach((authorStr) => {
-        if (authorStr.trim().length === 0) return; // Skip empty strings
+        authorSplits.forEach((authorStr) => {
+            if (authorStr.trim().length === 0) return; // Skip empty strings
 
-        // Handle corporate authors
-        if (!authorStr.includes(",") && authorStr === cleaned) {
-            parsedAuthors.push({ lastName: authorStr, firstName: "" }); // Treat as corporate author
-        } else {
-            const [last, first] = authorStr.includes(",")
-                ? authorStr.split(",").map((s) => s.trim()) // Format: "Last, First"
-                : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")]; // Format: "First Last"
-            parsedAuthors.push({ lastName: last, firstName: first });
-        }
-    });
+            // Handle corporate authors explicitly
+            if (!authorStr.includes(",") && authorStr === cleaned) {
+                parsedAuthors.push({ lastName: authorStr, firstName: "" }); // Treat as corporate author
+            } else {
+                const [last, first] = authorStr.includes(",")
+                    ? authorStr.split(",").map((s) => s.trim()) // Format: "Last, First"
+                    : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")]; // Format: "First Last"
+                parsedAuthors.push({ lastName: last, firstName: first });
+            }
+        });
     } else if (Array.isArray(authorsRaw)) {
         authorsRaw.forEach((author) => {
             parsedAuthors.push({
