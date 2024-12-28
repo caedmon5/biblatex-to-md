@@ -28853,15 +28853,17 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
       });
     } else if (Array.isArray(authorsRaw)) {
       authorsRaw.forEach((author) => {
-        parsedAuthors.push({
-          lastName: author.lastName || "Unknown",
-          firstName: author.firstName || ""
-        });
-      });
-    } else if (typeof authorsRaw === "object" && authorsRaw.lastName) {
-      parsedAuthors.push({
-        lastName: authorsRaw.lastName || "Unknown",
-        firstName: authorsRaw.firstName || ""
+        if (author.name) {
+          parsedAuthors.push({
+            lastName: author.name,
+            firstName: ""
+          });
+        } else {
+          parsedAuthors.push({
+            lastName: author.lastName || "Unknown",
+            firstName: author.firstName || ""
+          });
+        }
       });
     }
     return parsedAuthors;

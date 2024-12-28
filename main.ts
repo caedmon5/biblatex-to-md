@@ -95,19 +95,21 @@ if (!authorStr.includes(",") && !authorStr.match(/\\s+/)) {
                 parsedAuthors.push({ lastName: last, firstName: first });
             }
         });
-    } else if (Array.isArray(authorsRaw)) {
-        authorsRaw.forEach((author) => {
+} else if (Array.isArray(authorsRaw)) {
+    authorsRaw.forEach((author) => {
+        if (author.name) { // Handle corporate authors
+            parsedAuthors.push({
+                lastName: author.name,
+                firstName: "",
+            });
+        } else {
             parsedAuthors.push({
                 lastName: author.lastName || "Unknown",
                 firstName: author.firstName || "",
             });
-        });
-    } else if (typeof authorsRaw === "object" && authorsRaw.lastName) {
-        parsedAuthors.push({
-            lastName: authorsRaw.lastName || "Unknown",
-            firstName: authorsRaw.firstName || "",
-        });
-    }
+        }
+    });
+}
 
     return parsedAuthors;
 }
