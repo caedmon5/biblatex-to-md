@@ -79,13 +79,15 @@ parseAuthors(authorsRaw: string | Array<any> | Object): Array<{ lastName: string
     const parsedAuthors: Array<{ lastName: string; firstName: string }> = [];
 
 if (typeof authorsRaw === "string") {
-    const cleaned = authorsRaw.replace(/[{}]/g, ""); // Remove braces
+    const cleaned = authorsRaw.replace(/[{}]/g, "").trim(); // Remove braces
     const authorSplits = cleaned.split(/\s+and\s+/i);
+
     authorSplits.forEach((authorStr) => {
         if (authorStr.trim().length === 0) return; // Skip empty strings
-        if (!authorStr.includes(",") && cleaned.startsWith("{")) {
-            // Handle corporate authors
-            parsedAuthors.push({ lastName: cleaned.trim(), firstName: "" });
+
+        // Handle corporate authors
+        if (!authorStr.includes(",") && authorStr === cleaned) {
+            parsedAuthors.push({ lastName: authorStr, firstName: "" }); // Treat as corporate author
         } else {
             const [last, first] = authorStr.includes(",")
                 ? authorStr.split(",").map((s) => s.trim()) // Format: "Last, First"

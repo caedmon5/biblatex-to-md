@@ -28840,12 +28840,12 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
   parseAuthors(authorsRaw) {
     const parsedAuthors = [];
     if (typeof authorsRaw === "string") {
-      const cleaned = authorsRaw.replace(/[{}]/g, "");
+      const cleaned = authorsRaw.replace(/[{}]/g, "").trim();
       const authorSplits = cleaned.split(/\s+and\s+/i);
       authorSplits.forEach((authorStr) => {
         if (authorStr.trim().length === 0) return;
-        if (!authorStr.includes(",") && cleaned.startsWith("{")) {
-          parsedAuthors.push({ lastName: cleaned.trim(), firstName: "" });
+        if (!authorStr.includes(",") && authorStr === cleaned) {
+          parsedAuthors.push({ lastName: authorStr, firstName: "" });
         } else {
           const [last, first] = authorStr.includes(",") ? authorStr.split(",").map((s) => s.trim()) : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")];
           parsedAuthors.push({ lastName: last, firstName: first });
