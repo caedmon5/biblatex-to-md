@@ -28844,7 +28844,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
       const authorSplits = cleaned.split(/\s+and\s+/i);
       authorSplits.forEach((authorStr) => {
         if (authorStr.trim().length === 0) return;
-        if (!authorStr.includes(",") && authorStr === cleaned) {
+        if (!authorStr.includes(",") && !authorStr.match(/\\s+/)) {
           parsedAuthors.push({ lastName: authorStr, firstName: "" });
         } else {
           const [last, first] = authorStr.includes(",") ? authorStr.split(",").map((s) => s.trim()) : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")];
@@ -28876,9 +28876,10 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     const authorTags = [];
     const authorsYaml = [];
     parsedAuthors.forEach(({ lastName, firstName }) => {
-      const sanitizedTag = this.sanitizeString(`${lastName}${firstName[0] || ""}`);
+      const sanitizedTag = this.sanitizeString(`${lastName}`, false, true);
       authorTags.push(`#${sanitizedTag}`);
-      authorsYaml.push(`${lastName}, ${firstName}`);
+      const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
+      authorsYaml.push(yamlAuthor);
     });
     const fileNameAuthor = parsedAuthors.length > 1 ? `${parsedAuthors[0].lastName} et al` : parsedAuthors[0].lastName;
     return { authorTags: [...new Set(authorTags)], fileNameAuthor, authorsYaml: authorsYaml.join("; ") };

@@ -86,7 +86,7 @@ parseAuthors(authorsRaw: string | Array<any> | Object): Array<{ lastName: string
             if (authorStr.trim().length === 0) return; // Skip empty strings
 
             // Handle corporate authors explicitly
-            if (!authorStr.includes(",") && authorStr === cleaned) {
+if (!authorStr.includes(",") && !authorStr.match(/\\s+/)) {
                 parsedAuthors.push({ lastName: authorStr, firstName: "" }); // Treat as corporate author
             } else {
                 const [last, first] = authorStr.includes(",")
@@ -124,9 +124,10 @@ processAuthors(authorsRaw: string | Array<any> | Object) {
     const authorsYaml: string[] = [];
 
     parsedAuthors.forEach(({ lastName, firstName }) => {
-        const sanitizedTag = this.sanitizeString(`${lastName}${firstName[0] || ""}`);
+const sanitizedTag = this.sanitizeString(`${lastName}`, false, true);
         authorTags.push(`#${sanitizedTag}`); // Tags: LastnameFirstInitial
-        authorsYaml.push(`${lastName}, ${firstName}`); // YAML: Lastname, First
+const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
+authorsYaml.push(yamlAuthor);
     });
 
     const fileNameAuthor = parsedAuthors.length > 1
