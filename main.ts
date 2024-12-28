@@ -186,7 +186,8 @@ authorsYaml.push(yamlAuthor);
 	        console.log("Parsed entry:", entry);
 
 	        const fields = entry.fields || {};
-	        const title = fields.title || "Untitled";
+const shorttitle = fields.shorttitle ? this.sanitizeString(fields.shorttitle, true) : undefined;
+const title = fields.title || shorttitle || "Untitled";
 
         //---------------------------------------------------
         // (1) AUTHOR TAGS => build an array like ["#FryeN", "#SmithJ"]
@@ -285,11 +286,20 @@ tags: `["${[...authorTags, ...keywordArray].join('","')}"]`, // Combined author 
 	    true // Preserve spaces for file titles
 	);
 
-	const fileName = `LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
+// Build metadata for file name generation
+const metadata = {
+    authors: fileNameAuthor !== "Unknown" ? fileNameAuthor : undefined,
+    year: year !== "unknown year" ? year : undefined,
+    title: title || undefined,
+    shorttitle: shorttitle || undefined, // Ensure you extract this earlier if not already done
+};
 
+// Generate the file name using the new logic
+const fileName = this.generateFileName(metadata, new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''));
 
-	        await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
-	        console.log(`Created Markdown file: ${folderPath}/${fileName}`);
+// Create the Markdown file
+await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
+console.log(`Created Markdown file: ${folderPath}/${fileName}`);
 	      }
 	    } catch (error) {
 	      console.error(`Error processing file ${file.path}:`, error);

@@ -28919,7 +28919,8 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
         for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
           console.log("Parsed entry:", entry);
           const fields = entry.fields || {};
-          const title = fields.title || "Untitled";
+          const shorttitle = fields.shorttitle ? this.sanitizeString(fields.shorttitle, true) : void 0;
+          const title = fields.title || shorttitle || "Untitled";
           const authorsRaw = fields.author || "Unknown Author";
           const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.author || "Unknown Author");
           const authorsInlineArray = `["${authorTags.join('","')}"]`;
@@ -28987,7 +28988,14 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             true
             // Preserve spaces for file titles
           );
-          const fileName = `LNL ${fileNameAuthor} ${year} ${truncatedTitle}.md`;
+          const metadata = {
+            authors: fileNameAuthor !== "Unknown" ? fileNameAuthor : void 0,
+            year: year !== "unknown year" ? year : void 0,
+            title: title || void 0,
+            shorttitle: shorttitle || void 0
+            // Ensure you extract this earlier if not already done
+          };
+          const fileName = this.generateFileName(metadata, (/* @__PURE__ */ new Date()).toISOString().replace(/T/, " ").replace(/\..+/, ""));
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
           console.log(`Created Markdown file: ${folderPath}/${fileName}`);
         }
