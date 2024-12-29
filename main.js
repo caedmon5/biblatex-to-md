@@ -28899,7 +28899,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
   generateFileName(metadata, dateStamp) {
     const prefix = "LNL";
     const authors = metadata.authors || "";
-    const year = metadata.year === "Unknown year" ? "" : metadata.year;
+    const year = metadata.year && metadata.year !== "Unknown Year" ? metadata.year : "";
     const title = metadata.shorttitle || metadata.title || "";
     const components = [];
     if (authors) components.push(authors);
