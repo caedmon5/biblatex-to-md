@@ -28897,6 +28897,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
    * @returns {string} - The generated file name.
    */
   generateFileName(metadata, dateStamp) {
+    const prefix = "LNL";
     const authors = metadata.authors || "";
     const year = metadata.year || "";
     const title = metadata.title || metadata.shorttitle || "";
@@ -28905,9 +28906,9 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     if (year) components.push(year);
     if (title) components.push(this.sanitizeString(title));
     if (components.length === 0) {
-      return `LNL ${dateStamp}`;
+      return `${prefix} ${dateStamp}`;
     }
-    return components.join(" ");
+    return `${prefix} ${components.join(" ")}`;
   }
   /** 
    * Import BibTex function

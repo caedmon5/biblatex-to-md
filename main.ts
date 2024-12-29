@@ -151,6 +151,7 @@ authorsYaml.push(yamlAuthor);
  * @returns {string} - The generated file name.
  */
 generateFileName(metadata: Record<string, string | undefined>, dateStamp: string): string {
+const prefix = "LNL"; // Explicitly define the prefix for the file name
     const authors = metadata.authors || ""; // Processed author string
     const year = metadata.year || "";       // Year if available
     const title = metadata.title || metadata.shorttitle || ""; // Title or short title
@@ -163,10 +164,10 @@ generateFileName(metadata: Record<string, string | undefined>, dateStamp: string
 
     // If no meaningful components, use fallback
     if (components.length === 0) {
-        return `LNL ${dateStamp}`;
+        return `${prefix} ${dateStamp}`;
     }
 
-    return components.join(" ");
+    return `${prefix} ${components.join(" ")}`;
 }
 
 
