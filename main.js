@@ -28878,12 +28878,13 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     const authorTags = [];
     const authorsYaml = [];
     parsedAuthors.forEach(({ lastName, firstName }) => {
+      if (lastName === "Unknown Author") return;
       const sanitizedTag = this.sanitizeString(`${lastName}`, false, true);
       authorTags.push(`#${sanitizedTag}`);
       const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
       authorsYaml.push(yamlAuthor);
     });
-    const fileNameAuthor = parsedAuthors.length > 1 ? `${parsedAuthors[0].lastName} et al` : parsedAuthors[0].lastName;
+    const fileNameAuthor = parsedAuthors.length > 1 ? `${parsedAuthors[0].lastName} et al` : parsedAuthors[0]?.lastName || "";
     return { authorTags: [...new Set(authorTags)], fileNameAuthor, authorsYaml: authorsYaml.join("; ") };
   }
   /**

@@ -126,15 +126,18 @@ processAuthors(authorsRaw: string | Array<any> | Object) {
     const authorsYaml: string[] = [];
 
     parsedAuthors.forEach(({ lastName, firstName }) => {
-const sanitizedTag = this.sanitizeString(`${lastName}`, false, true);
+        if (lastName === "Unknown Author") return; // Skip processing for unknown authors
+
+        const sanitizedTag = this.sanitizeString(`${lastName}`, false, true);
         authorTags.push(`#${sanitizedTag}`); // Tags: LastnameFirstInitial
-const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
-authorsYaml.push(yamlAuthor);
+
+        const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
+        authorsYaml.push(yamlAuthor);
     });
 
     const fileNameAuthor = parsedAuthors.length > 1
         ? `${parsedAuthors[0].lastName} et al` // Use only the first author for file names
-        : parsedAuthors[0].lastName; // Single author: just the last name
+        : parsedAuthors[0]?.lastName || ""; // Single author: just the last name
 
     return { authorTags: [...new Set(authorTags)], fileNameAuthor, authorsYaml: authorsYaml.join("; ") };
 }
