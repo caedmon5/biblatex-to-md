@@ -157,7 +157,9 @@ generateFileName(metadata: Record<string, string | undefined>, dateStamp: string
 const prefix = "LNL"; // Explicitly define the prefix for the file name
 const authors = metadata.authors && metadata.authors !== "Unknown Author" ? metadata.authors : "";
 const year = metadata.year && metadata.year !== "Unknown Year" ? metadata.year : "";
-const title = metadata.shorttitle || metadata.title || metadata.publication || "";
+const title = metadata.shorttitle || 
+              (metadata.title && metadata.title !== "Unknown Title" ? metadata.title : "") || 
+              metadata.publication || "";
 
     // Build the title components
     const components: string[] = [];

@@ -28901,7 +28901,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     const prefix = "LNL";
     const authors = metadata.authors && metadata.authors !== "Unknown Author" ? metadata.authors : "";
     const year = metadata.year && metadata.year !== "Unknown Year" ? metadata.year : "";
-    const title = metadata.shorttitle || metadata.title || metadata.publication || "";
+    const title = metadata.shorttitle || (metadata.title && metadata.title !== "Unknown Title" ? metadata.title : "") || metadata.publication || "";
     const components = [];
     if (authors) components.push(authors);
     if (year) components.push(year);
