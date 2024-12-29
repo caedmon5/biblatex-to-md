@@ -28899,16 +28899,16 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
   generateFileName(metadata, dateStamp) {
     const prefix = "LNL";
     const authors = metadata.authors || "";
-    const year = metadata.year || "";
-    const title = metadata.title || metadata.shorttitle || "";
+    const year = metadata.year === "Unknown year" ? "" : metadata.year;
+    const title = metadata.shorttitle || metadata.title || "";
     const components = [];
     if (authors) components.push(authors);
     if (year) components.push(year);
     if (title) components.push(this.sanitizeString(title));
     if (components.length === 0) {
-      return `${prefix} ${dateStamp}`;
+      return `${prefix} ${dateStamp}.md`;
     }
-    return `${prefix} ${components.join(" ")}`;
+    return `${prefix} ${components.join(" ")}.md`;
   }
   /** 
    * Import BibTex function

@@ -153,8 +153,8 @@ authorsYaml.push(yamlAuthor);
 generateFileName(metadata: Record<string, string | undefined>, dateStamp: string): string {
 const prefix = "LNL"; // Explicitly define the prefix for the file name
     const authors = metadata.authors || ""; // Processed author string
-    const year = metadata.year || "";       // Year if available
-    const title = metadata.title || metadata.shorttitle || ""; // Title or short title
+const year = metadata.year === "Unknown year" ? "" : metadata.year; // year if available, otherwise nothing.
+    const title = metadata.shorttitle || metadata.title || ""; // Title or short title
 
     // Build the title components
     const components: string[] = [];
@@ -164,10 +164,10 @@ const prefix = "LNL"; // Explicitly define the prefix for the file name
 
     // If no meaningful components, use fallback
     if (components.length === 0) {
-        return `${prefix} ${dateStamp}`;
+        return `${prefix} ${dateStamp}.md`;
     }
 
-    return `${prefix} ${components.join(" ")}`;
+    return `${prefix} ${components.join(" ")}.md`;
 }
 
 
