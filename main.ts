@@ -73,10 +73,6 @@ sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean 
         })
         .join(""); // Join words without spaces or hyphens
 
-    if (forTags) {
-        sanitized = `#${sanitized}`; // Add a tag prefix if needed
-    }
-
     return sanitized;
 }
 

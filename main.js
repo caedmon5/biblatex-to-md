@@ -28832,9 +28832,6 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
       }
       return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     }).join("");
-    if (forTags) {
-      sanitized = `#${sanitized}`;
-    }
     return sanitized;
   }
   /**
