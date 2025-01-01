@@ -28753,13 +28753,49 @@ __export(main_exports, {
   default: () => BibLaTeXPlugin
 });
 module.exports = __toCommonJS(main_exports);
+var import_obsidian2 = require("obsidian");
+
+// settings.ts
 var import_obsidian = require("obsidian");
-var BibtexParser = require_bibtex_parser();
 var DEFAULT_SETTINGS = {
-  templatePath: "templates/bibtex-template.md"
-  // Default template path
+  templatePath: "templates/bibtex-template.md",
+  entryLimit: 5
+  // Default is 5
 };
-var BibLaTeXPlugin = class extends import_obsidian.Plugin {
+var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
+  // Ideally, replace 'any' with the specific plugin type (BibLaTeXPlugin)
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+  // Display settings in the Obsidian settings panel
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
+    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Path to the template file for Markdown notes.").addText(
+      (text) => text.setPlaceholder("Enter template path").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
+        console.log("Template Path: " + value);
+        this.plugin.settings.templatePath = value;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("Entry Limit").setDesc("Maximum number of entries to process from each BibTeX file (1 or more).").addText(
+      (text) => text.setPlaceholder("e.g., 5 or 10000").setValue(String(this.plugin.settings.entryLimit)).onChange(async (value) => {
+        console.log("Entry Limit (raw):", value);
+        const parsedValue = parseInt(value, 10);
+        if (!isNaN(parsedValue) && parsedValue > 0) {
+          this.plugin.settings.entryLimit = parsedValue;
+          await this.plugin.saveSettings();
+        }
+      })
+    );
+  }
+};
+
+// main.ts
+var BibtexParser = require_bibtex_parser();
+var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
   // Plugin initialization and setup
   async onload() {
     console.log("BibLaTeX Plugin loaded.");
@@ -28780,11 +28816,113 @@ var BibLaTeXPlugin = class extends import_obsidian.Plugin {
   async saveSettings() {
     await this.saveData(this.settings);
   }
+  /**
+   * Helper function to sanitize strings
+   * Removes invalid characters for filenames, tags, and other uses.
+   * @param {string} input - The string to sanitize.
+   * @param {boolean} preserveSpaces - Whether to preserve spaces (default: false).
+   * @param {boolean} forTags - Whether the string is being sanitized for tags (default: false).
+   * @returns {string} Sanitized string.
+   */
+  sanitizeString(input, preserveSpaces = false, forTags = false) {
+    let sanitized = input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['’]/g, "").replace(/[\/\\:*?"<>|]/g, "").replace(/\./g, "").replace(/[()]/g, "").trim();
+    sanitized = sanitized.split(/[\s-]+/).map((word, index) => {
+      if (index === 0) {
+        return word.toLowerCase();
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }).join("");
+    return sanitized;
+  }
+  /**
+   * Helper function to parse BibTeX authors into a normalized format
+   * @param {string | Array | Object} authorsRaw - Raw authors data from BibTeX
+   * @returns {Array<{ lastName: string, firstName: string }>} Array of parsed authors
+   */
+  parseAuthors(authorsRaw) {
+    const parsedAuthors = [];
+    if (typeof authorsRaw === "string") {
+      const cleaned = authorsRaw.replace(/[{}]/g, "").trim();
+      const authorSplits = cleaned.split(/\s+and\s+/i);
+      authorSplits.forEach((authorStr) => {
+        if (authorStr.trim().length === 0) return;
+        if (!authorStr.includes(",") && !authorStr.match(/\\s+/)) {
+          parsedAuthors.push({ lastName: authorStr, firstName: "" });
+        } else {
+          const [last, first] = authorStr.includes(",") ? authorStr.split(",").map((s) => s.trim()) : [authorStr.split(/\s+/).pop() || "", authorStr.split(/\s+/).slice(0, -1).join(" ")];
+          parsedAuthors.push({ lastName: last, firstName: first });
+        }
+      });
+    } else if (Array.isArray(authorsRaw)) {
+      authorsRaw.forEach((author) => {
+        if (author.name) {
+          parsedAuthors.push({
+            lastName: author.name,
+            firstName: ""
+          });
+        } else {
+          parsedAuthors.push({
+            lastName: author.lastName || "Unknown",
+            firstName: author.firstName || ""
+          });
+        }
+      });
+    }
+    return parsedAuthors;
+  }
+  /**
+   * Helper function to process author names
+   * @param {string | Array | Object} authorsRaw - Raw authors data
+   * @returns {Object} Object with formatted tags, file name author, and YAML authors
+   */
+  processAuthors(authorsRaw) {
+    const parsedAuthors = this.parseAuthors(authorsRaw);
+    const authorTags = [];
+    const authorsYaml = [];
+    parsedAuthors.forEach(({ lastName, firstName }) => {
+      if (lastName === "Unknown Author") return;
+      const sanitizedTag = this.sanitizeString(`${lastName}${firstName?.charAt(0) || ""}`, false, true);
+      authorTags.push(`#${sanitizedTag}`);
+      const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
+      authorsYaml.push(yamlAuthor);
+    });
+    const fileNameAuthor = parsedAuthors.length > 1 ? `${parsedAuthors[0].lastName} et al` : parsedAuthors[0]?.lastName || "";
+    return { authorTags: [...new Set(authorTags)], fileNameAuthor, authorsYaml: authorsYaml.join("; ") };
+  }
+  /**
+   * Generate a file name based on provided metadata.
+   * This function constructs a file name by combining authors, year, and title,
+   * while adhering to fallback rules for missing data. If all metadata is missing,
+   * it uses a default pattern with a timestamp.
+   *
+   * @param {Record<string, string | undefined>} metadata - An object containing authors, year, title, and shorttitle.
+   * @param {string} dateStamp - A timestamp in the format "YYYY-MM-DD HH:MM" to use as a fallback.
+   * @returns {string} - The generated file name.
+   */
+  generateFileName(metadata, dateStamp) {
+    const prefix = "LNL";
+    const authors = metadata.authors && metadata.authors !== "Unknown Author" ? metadata.authors : "";
+    const year = metadata.year && metadata.year !== "Unknown Year" ? metadata.year : "";
+    const title = (metadata.shorttitle || (metadata.title && metadata.title !== "Unknown Title" && metadata.title !== "Untitled" ? metadata.title : "") || metadata.publication || "").split(/\s+/).slice(0, 3).join(" ");
+    const components = [];
+    if (authors) components.push(authors);
+    if (year) components.push(year);
+    if (title) components.push(this.sanitizeString(title));
+    if (components.length === 0) {
+      return `${prefix} ${dateStamp}.md`;
+    }
+    return `${prefix} ${components.join(" ")}.md`;
+  }
+  /** 
+   * Import BibTex function
+   *
+   *
+   */
   async importBibTeX() {
     const files = this.app.vault.getFiles().filter((file) => file.extension === "bib");
     console.log("Found .bib files:", files.map((file) => file.path));
     if (files.length === 0) {
-      new import_obsidian.Notice("No BibTeX files found in your vault.");
+      new import_obsidian2.Notice("No BibTeX files found in your vault.");
       return;
     }
     const coreTemplatesSettings = this.app.internalPlugins.plugins["templates"]?.instance?.options;
@@ -28792,7 +28930,7 @@ var BibLaTeXPlugin = class extends import_obsidian.Plugin {
     const templatePath = coreTemplateFolder ? `${coreTemplateFolder}/bibtex-template.md` : this.settings.templatePath;
     const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
     if (!templateFile) {
-      new import_obsidian.Notice(`Template file not found: ${templatePath}`);
+      new import_obsidian2.Notice(`Template file not found: ${templatePath}`);
       console.error(`Template file not found: ${templatePath}`);
       return;
     }
@@ -28801,61 +28939,91 @@ var BibLaTeXPlugin = class extends import_obsidian.Plugin {
       try {
         const content = await this.app.vault.read(file);
         console.log(`Processing file: ${file.path}`);
-        if (this.settings.debugMode) {
-          console.log("File content:", content);
-        }
+        console.log("File content:", content);
         const parsedResult = BibtexParser.parse(content);
         const parsedEntries = parsedResult.entries;
         console.log("Parsed entries:", parsedEntries);
-        for (const entry of parsedEntries) {
+        for (const entry of parsedEntries.slice(0, this.settings.entryLimit)) {
           console.log("Parsed entry:", entry);
           const fields = entry.fields || {};
-          const title = fields.title || "Untitled";
-          let authors = fields.author || "Unknown Author";
-          if (typeof authors === "string") {
-            const authorParts = authors.replace(/[{}]/g, "").split(",");
-            authors = authorParts[0]?.trim() || "Unknown Author";
-          } else if (Array.isArray(authors)) {
-            authors = authors.map((a) => a.lastName || "Unknown").join(", ");
-          } else if (typeof authors === "object" && authors.lastName) {
-            authors = authors.lastName;
-          } else {
-            authors = String(authors);
+          const shorttitle = fields.shorttitle ? this.sanitizeString(fields.shorttitle, true) : void 0;
+          const title = fields.title || shorttitle || "Untitled";
+          const safeTitleForYaml = title.replace(/"/g, "'");
+          const authorsRaw = fields.author || "Unknown Author";
+          const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.author || "Unknown Author");
+          const authorsInlineArray = `["${authorTags.join('","')}"]`;
+          let keywordsHuman = [];
+          let keywordArray = [];
+          if (typeof fields.keywords === "string" && fields.keywords.trim()) {
+            const cleaned = fields.keywords.replace(/[{}]/g, "").trim();
+            if (cleaned) {
+              const splitted = cleaned.split(",").map((k) => k.trim());
+              keywordsHuman = splitted;
+              keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw, false, true)}`);
+            }
+          } else if (Array.isArray(fields.keywords)) {
+            keywordsHuman = fields.keywords.map((kw) => String(kw));
+            keywordArray = fields.keywords.map((kw) => `#${this.sanitizeString(String(kw), false, true)}`);
           }
+          const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
+          const combinedTags = [...authorTags, ...keywordArray];
           const year = fields.date?.split("-")[0] || fields.year || "Unknown Year";
           const abstract = fields.abstract || "No abstract provided.";
           const journaltitle = fields.journaltitle || "Unknown Journal";
-          const keywords = fields.keywords || "None";
+          const citekey = entry.key || "UnknownKey";
+          const createdDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+          const lastModified = fields["date-modified"] || createdDate;
+          const url = fields.url || "No link provided";
+          const replacements = {
+            citekey,
+            createdDate,
+            lastModified,
+            title: safeTitleForYaml,
+            year,
+            abstract,
+            journaltitle,
+            type: entry.type || "Unknown Type",
+            publisher: fields.publisher || "Unknown Publisher",
+            volume: fields.volume || "N/A",
+            issue: fields.issue || "N/A",
+            pages: fields.pages || "N/A",
+            doi: fields.doi || "N/A",
+            url,
+            zoteroLink: url,
+            conditionalFields: "",
+            // Insert the inline YAML arrays
+            authors: authorsYaml,
+            // For the "Authors" line in the YAML
+            keywords: keywordsHuman.join(", "),
+            // Human-readable for YAML
+            tags: `["${[...authorTags, ...keywordArray].join('","')}"]`
+            // Combined author tags and keyword tags
+          };
           const populatedContent = templateContent.replace(/{{(.*?)}}/g, (_, key) => {
-            const replacements = {
-              type: entry.type || "Unknown Type",
-              authors,
-              title,
-              year,
-              abstract,
-              journaltitle,
-              keywords,
-              publisher: fields.publisher || "Unknown Publisher",
-              volume: fields.volume || "N/A",
-              issue: fields.issue || "N/A",
-              pages: fields.pages || "N/A",
-              doi: fields.doi || "N/A",
-              url: fields.url || "No URL provided"
-            };
-            const value = replacements[key.trim()];
-            if (value === void 0) {
+            const val = replacements[key.trim()];
+            if (val === void 0) {
               console.warn(`Warning: No replacement found for placeholder "{{${key}}}".`);
               return `{{${key}}}`;
             }
-            return value;
+            return val;
           });
           const folderPath = "LN Literature Notes";
           if (!this.app.vault.getAbstractFileByPath(folderPath)) {
             await this.app.vault.createFolder(folderPath);
           }
-          const sanitizedTitle = title.replace(/[\/\\:*?"<>|]/g, "_").slice(0, 50);
-          const sanitizedAuthors = authors.replace(/[\/\\:*?"<>|]/g, "_");
-          const fileName = `LN ${sanitizedAuthors} ${year} ${sanitizedTitle}.md`;
+          const truncatedTitle = this.sanitizeString(
+            title.split(/\s+/).slice(0, 3).join(" "),
+            true
+            // Preserve spaces for file titles
+          );
+          const metadata = {
+            authors: fileNameAuthor !== "Unknown" ? fileNameAuthor : void 0,
+            year: year !== "unknown year" ? year : void 0,
+            title: title || void 0,
+            shorttitle: shorttitle || void 0
+            // Ensure you extract this earlier if not already done
+          };
+          const fileName = this.generateFileName(metadata, (/* @__PURE__ */ new Date()).toISOString().replace(/T/, " ").replace(/\..+/, ""));
           await this.app.vault.create(`${folderPath}/${fileName}`, populatedContent);
           console.log(`Created Markdown file: ${folderPath}/${fileName}`);
         }
@@ -28863,29 +29031,28 @@ var BibLaTeXPlugin = class extends import_obsidian.Plugin {
         console.error(`Error processing file ${file.path}:`, error);
       }
     }
-    new import_obsidian.Notice("BibTeX entries imported successfully!");
+    new import_obsidian2.Notice("BibTeX entries imported successfully!");
+  }
+  // helper plugin
+  buildAuthorTag(authorStr) {
+    const trimmed = authorStr.trim();
+    if (!trimmed || trimmed.toLowerCase() === "unknown author") {
+      return "UnknownAuthor";
+    }
+    if (trimmed.includes(",")) {
+      const [last, firstRest] = trimmed.split(",", 2).map((s) => s.trim());
+      const firstInitial = firstRest?.[0] ?? "";
+      return `${last}${firstInitial}`;
+    } else {
+      const parts = trimmed.split(/\s+/);
+      const last = parts.pop() || "";
+      const first = parts.shift() || "";
+      const firstInitial = first?.[0] ?? "";
+      return `${last}${firstInitial}`;
+    }
   }
   // Plugin cleanup (optional, for when the plugin is disabled)
   onunload() {
     console.log("BibLaTeX Plugin unloaded.");
-  }
-};
-var BibLaTeXPluginSettingTab = class extends import_obsidian.PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-  // Display settings in the Obsidian settings panel
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    containerEl.createEl("h2", { text: "Settings for BibLaTeX Plugin" });
-    new import_obsidian.Setting(containerEl).setName("Template Path").setDesc("Path to the template file for Markdown notes.").addText(
-      (text) => text.setPlaceholder("Enter template path").setValue(this.plugin.settings.templatePath).onChange(async (value) => {
-        console.log("Template Path: " + value);
-        this.plugin.settings.templatePath = value;
-        await this.plugin.saveSettings();
-      })
-    );
   }
 };
