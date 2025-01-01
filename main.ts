@@ -237,6 +237,9 @@ const title = (
 	        const fields = entry.fields || {};
 const shorttitle = fields.shorttitle ? this.sanitizeString(fields.shorttitle, true) : undefined;
 const title = fields.title || shorttitle || "Untitled";
+// Replace any double quotes in title with single quotes for use in yaml
+const safeTitleForYaml = title.replace(/"/g, "'");
+
 
         //---------------------------------------------------
         // (1) AUTHOR TAGS => build an array like ["#FryeN", "#SmithJ"]
@@ -291,7 +294,7 @@ const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
           citekey,
           createdDate,
           lastModified,
-          title,
+          title: safeTitleForYaml,
           year,
           abstract,
           journaltitle,
