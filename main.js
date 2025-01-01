@@ -28825,12 +28825,17 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
    * @returns {string} Sanitized string.
    */
   sanitizeString(input, preserveSpaces = false, forTags = false) {
-    let sanitized = input.replace(/[\/\\:*?"<>|]/g, "").replace(/\./g, "_").replace(/[()]/g, "_").trim();
-    if (!preserveSpaces) {
-      sanitized = sanitized.replace(/\s+/g, forTags ? "_" : " ");
+    let sanitized = input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['’]/g, "").replace(/[\/\\:*?"<>|]/g, "").replace(/\./g, "").replace(/[()]/g, "").trim();
+    sanitized = sanitized.split(/[\s-]+/).map((word, index) => {
+      if (index === 0) {
+        return word.toLowerCase();
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }).join("");
+    if (forTags) {
+      sanitized = `#${sanitized}`;
     }
-    sanitized = sanitized.replace(/_+$/g, "");
-    return forTags ? sanitized.replace(/_+/g, "_") : sanitized;
+    return sanitized;
   }
   /**
    * Helper function to parse BibTeX authors into a normalized format
@@ -28879,7 +28884,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     const authorsYaml = [];
     parsedAuthors.forEach(({ lastName, firstName }) => {
       if (lastName === "Unknown Author") return;
-      const sanitizedTag = this.sanitizeString(`${lastName}`, false, true);
+      const sanitizedTag = this.sanitizeString(`${lastName}${firstName?.charAt(0) || ""}`, false, true);
       authorTags.push(`#${sanitizedTag}`);
       const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
       authorsYaml.push(yamlAuthor);
@@ -28946,6 +28951,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           const fields = entry.fields || {};
           const shorttitle = fields.shorttitle ? this.sanitizeString(fields.shorttitle, true) : void 0;
           const title = fields.title || shorttitle || "Untitled";
+          const safeTitleForYaml = title.replace(/"/g, "'");
           const authorsRaw = fields.author || "Unknown Author";
           const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.author || "Unknown Author");
           const authorsInlineArray = `["${authorTags.join('","')}"]`;
@@ -28975,7 +28981,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             citekey,
             createdDate,
             lastModified,
-            title,
+            title: safeTitleForYaml,
             year,
             abstract,
             journaltitle,

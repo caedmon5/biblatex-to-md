@@ -52,23 +52,34 @@ export default class BibLaTeXPlugin extends Plugin {
  * @param {boolean} forTags - Whether the string is being sanitized for tags (default: false).
  * @returns {string} Sanitized string.
  */
+
 sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean = false): string {
     let sanitized = input
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+        .replace(/['’]/g, "") // Remove apostrophes
         .replace(/[\/\\:*?"<>|]/g, "") // Remove invalid characters
-        .replace(/\./g, "_") // Replace periods with underscores
-.replace(/[()]/g, "_") // Replace parentheses with underscores to preserve grouping
+        .replace(/\./g, "") // Remove periods
+        .replace(/[()]/g, "") // Remove parentheses
         .trim(); // Remove leading/trailing whitespace
 
-    if (!preserveSpaces) {
-        sanitized = sanitized.replace(/\s+/g, forTags ? "_" : " "); // Replace spaces with underscores for tags, keep spaces for titles
+    // Convert to camelCase (e.g., "La Fleur" => "laFleur")
+    sanitized = sanitized
+        .split(/[\s-]+/) // Split on spaces or hyphens
+        .map((word, index) => {
+            if (index === 0) {
+                return word.toLowerCase(); // First word lowercase
+            }
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(); // Capitalize subsequent words
+        })
+        .join(""); // Join words without spaces or hyphens
+
+    if (forTags) {
+        sanitized = `#${sanitized}`; // Add a tag prefix if needed
     }
 
-    // Remove trailing underscores that may result from parentheses
-    sanitized = sanitized.replace(/_+$/g, "");
-
-    // Normalize consecutive underscores to single (tags only)
-    return forTags ? sanitized.replace(/_+/g, "_") : sanitized;
+    return sanitized;
 }
+
 
 /**
  * Helper function to parse BibTeX authors into a normalized format
@@ -128,7 +139,7 @@ processAuthors(authorsRaw: string | Array<any> | Object) {
     parsedAuthors.forEach(({ lastName, firstName }) => {
         if (lastName === "Unknown Author") return; // Skip processing for unknown authors
 
-        const sanitizedTag = this.sanitizeString(`${lastName}`, false, true);
+const sanitizedTag = this.sanitizeString(`${lastName}${firstName?.charAt(0) || ""}`, false, true);
         authorTags.push(`#${sanitizedTag}`); // Tags: LastnameFirstInitial
 
         const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
