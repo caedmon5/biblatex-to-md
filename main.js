@@ -28949,7 +28949,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           const shorttitle = fields.shorttitle ? this.sanitizeString(fields.shorttitle, true) : void 0;
           const title = fields.title || shorttitle || "Untitled";
           const safeTitleForYaml = title.replace(/"/g, "'");
-          const notes = fields.notes ? fields.notes.split(/\n+/).reverse() : [];
+          const notes = fields.note ? fields.note.split(/\n+/).reverse() : [];
           const formattedNotes = notes.map((note) => `- ${note.replace(/^\s+|\s+$/g, "")}`).join("\n");
           const authorsRaw = fields.author || "Unknown Author";
           const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.author || "Unknown Author");
