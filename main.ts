@@ -246,6 +246,11 @@ const shorttitle = fields.shorttitle ? this.sanitizeString(fields.shorttitle, tr
 const title = fields.title || shorttitle || "Untitled";
 // Replace any double quotes in title with single quotes for use in yaml
 const safeTitleForYaml = title.replace(/"/g, "'");
+const notes = fields.notes ? fields.notes.split(/\n+/).reverse() : []; // Reverse the order
+const formattedNotes = notes
+    .map(note => `- ${note.replace(/^\s+|\s+$/g, "")}`) // Trim only excessive leading and trailing spaces
+    .join("\n");
+
 
 
         //---------------------------------------------------
@@ -304,7 +309,8 @@ const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
           title: safeTitleForYaml,
           year,
           abstract,
-          journaltitle,
+          notes: formattedNotes || "No notes available.", // Add notes
+	  journaltitle,
           type: entry.type || "Unknown Type",
           publisher: fields.publisher || "Unknown Publisher",
           volume: fields.volume || "N/A",

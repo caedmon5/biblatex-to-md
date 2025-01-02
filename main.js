@@ -28949,6 +28949,8 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
           const shorttitle = fields.shorttitle ? this.sanitizeString(fields.shorttitle, true) : void 0;
           const title = fields.title || shorttitle || "Untitled";
           const safeTitleForYaml = title.replace(/"/g, "'");
+          const notes = fields.notes ? fields.notes.split(/\n+/).reverse() : [];
+          const formattedNotes = notes.map((note) => `- ${note.replace(/^\s+|\s+$/g, "")}`).join("\n");
           const authorsRaw = fields.author || "Unknown Author";
           const { authorTags, fileNameAuthor, authorsYaml } = this.processAuthors(fields.author || "Unknown Author");
           const authorsInlineArray = `["${authorTags.join('","')}"]`;
@@ -28981,6 +28983,8 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             title: safeTitleForYaml,
             year,
             abstract,
+            notes: formattedNotes || "No notes available.",
+            // Add notes
             journaltitle,
             type: entry.type || "Unknown Type",
             publisher: fields.publisher || "Unknown Publisher",
