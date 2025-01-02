@@ -300,7 +300,7 @@ if (typeof fields.keywords === "string" && fields.keywords.trim()) {
     }
 } else if (Array.isArray(fields.keywords)) {
     keywordsHuman = fields.keywords.map((kw: string) => String(kw));
-    keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(String(kw), false, true)}`); // Tags
+keywordArray = fields.keywords.map((kw: string) => `#${this.sanitizeString(String(kw), false, true, true)}`); // Tags with underscores
 }
 
 // Generate human-readable and tag formats

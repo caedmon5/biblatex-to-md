@@ -28982,7 +28982,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             }
           } else if (Array.isArray(fields.keywords)) {
             keywordsHuman = fields.keywords.map((kw) => String(kw));
-            keywordArray = fields.keywords.map((kw) => `#${this.sanitizeString(String(kw), false, true)}`);
+            keywordArray = fields.keywords.map((kw) => `#${this.sanitizeString(String(kw), false, true, true)}`);
           }
           const keywordsInlineArray = `["${keywordArray.join('","')}"]`;
           const combinedTags = [...authorTags, ...keywordArray];
