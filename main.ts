@@ -45,15 +45,27 @@ export default class BibLaTeXPlugin extends Plugin {
   }
 
 /**
- * Helper function to sanitize strings
- * Removes invalid characters for filenames, tags, and other uses.
+ * Helper function to sanitize strings for filenames, tags, and other uses.
+ * 
+ * This function applies different transformations based on the context:
+ * - For tags: 
+ *   - Keywords are converted to lowercase with underscores (e.g., "Old English" => "old_english").
+ *   - Author tags are converted to lowercase with camelCase-like formatting (e.g., "La Fleur H" => "lafleurh").
+ * - For general cases:
+ *   - Removes invalid characters and trims leading/trailing whitespace.
+ * 
  * @param {string} input - The string to sanitize.
  * @param {boolean} preserveSpaces - Whether to preserve spaces (default: false).
  * @param {boolean} forTags - Whether the string is being sanitized for tags (default: false).
+ * @param {boolean} isKeyword - Whether the string is a keyword tag (default: false).
  * @returns {string} Sanitized string.
  */
-
-sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean = false): string {
+sanitizeString(
+    input: string,
+    preserveSpaces: boolean = false,
+    forTags: boolean = false,
+    isKeyword: boolean = false
+): string {
     let sanitized = input
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove diacritics
         .replace(/['’]/g, "") // Remove apostrophes
@@ -62,16 +74,22 @@ sanitizeString(input: string, preserveSpaces: boolean = false, forTags: boolean 
         .replace(/[()]/g, "") // Remove parentheses
         .trim(); // Remove leading/trailing whitespace
 
-    // Convert to camelCase (e.g., "La Fleur" => "laFleur")
-    sanitized = sanitized
-        .split(/[\s-]+/) // Split on spaces or hyphens
-        .map((word, index) => {
-            if (index === 0) {
-                return word.toLowerCase(); // First word lowercase
-            }
-            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(); // Capitalize subsequent words
-        })
-        .join(""); // Join words without spaces or hyphens
+    if (forTags) {
+        if (isKeyword) {
+            // Keyword tags: lowercase with underscores
+            sanitized = sanitized
+                .toLowerCase() // Convert to lowercase
+                .replace(/[\s-]+/g, "_"); // Replace spaces and hyphens with underscores
+        } else {
+            // Author tags: lowercase with camelCase
+            sanitized = sanitized
+                .toLowerCase() // Convert to lowercase
+                .replace(/[\s-]+/g, ""); // Remove spaces and hyphens
+        }
+    } else if (!preserveSpaces) {
+        // General case for filenames or other uses
+        sanitized = sanitized.replace(/\s+/g, " "); // Replace multiple spaces with a single space
+    }
 
     return sanitized;
 }
@@ -135,8 +153,13 @@ processAuthors(authorsRaw: string | Array<any> | Object) {
     parsedAuthors.forEach(({ lastName, firstName }) => {
         if (lastName === "Unknown Author") return; // Skip processing for unknown authors
 
-const sanitizedTag = this.sanitizeString(`${lastName}${firstName?.charAt(0) || ""}`, false, true);
-        authorTags.push(`#${sanitizedTag}`); // Tags: LastnameFirstInitial
+const sanitizedTag = this.sanitizeString(
+    `${lastName}${firstName?.charAt(0) || ""}`, 
+    false, 
+    true, 
+    false // Not a keyword
+);
+authorTags.push(`#${sanitizedTag}`); // Tags: LastnameFirstInitial
 
         const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
         authorsYaml.push(yamlAuthor);
@@ -273,7 +296,7 @@ if (typeof fields.keywords === "string" && fields.keywords.trim()) {
     if (cleaned) {
         const splitted = cleaned.split(",").map((k) => k.trim());
         keywordsHuman = splitted; // Human-readable for YAML
-        keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw, false, true)}`); // Tags
+        keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw, false, true, true)}`); // Tags with underscores
     }
 } else if (Array.isArray(fields.keywords)) {
     keywordsHuman = fields.keywords.map((kw: string) => String(kw));

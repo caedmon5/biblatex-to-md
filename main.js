@@ -28817,21 +28817,32 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     await this.saveData(this.settings);
   }
   /**
-   * Helper function to sanitize strings
-   * Removes invalid characters for filenames, tags, and other uses.
+   * Helper function to sanitize strings for filenames, tags, and other uses.
+   * 
+   * This function applies different transformations based on the context:
+   * - For tags: 
+   *   - Keywords are converted to lowercase with underscores (e.g., "Old English" => "old_english").
+   *   - Author tags are converted to lowercase with camelCase-like formatting (e.g., "La Fleur H" => "lafleurh").
+   * - For general cases:
+   *   - Removes invalid characters and trims leading/trailing whitespace.
+   * 
    * @param {string} input - The string to sanitize.
    * @param {boolean} preserveSpaces - Whether to preserve spaces (default: false).
    * @param {boolean} forTags - Whether the string is being sanitized for tags (default: false).
+   * @param {boolean} isKeyword - Whether the string is a keyword tag (default: false).
    * @returns {string} Sanitized string.
    */
-  sanitizeString(input, preserveSpaces = false, forTags = false) {
+  sanitizeString(input, preserveSpaces = false, forTags = false, isKeyword = false) {
     let sanitized = input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['’]/g, "").replace(/[\/\\:*?"<>|]/g, "").replace(/\./g, "").replace(/[()]/g, "").trim();
-    sanitized = sanitized.split(/[\s-]+/).map((word, index) => {
-      if (index === 0) {
-        return word.toLowerCase();
+    if (forTags) {
+      if (isKeyword) {
+        sanitized = sanitized.toLowerCase().replace(/[\s-]+/g, "_");
+      } else {
+        sanitized = sanitized.toLowerCase().replace(/[\s-]+/g, "");
       }
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    }).join("");
+    } else if (!preserveSpaces) {
+      sanitized = sanitized.replace(/\s+/g, " ");
+    }
     return sanitized;
   }
   /**
@@ -28881,7 +28892,13 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
     const authorsYaml = [];
     parsedAuthors.forEach(({ lastName, firstName }) => {
       if (lastName === "Unknown Author") return;
-      const sanitizedTag = this.sanitizeString(`${lastName}${firstName?.charAt(0) || ""}`, false, true);
+      const sanitizedTag = this.sanitizeString(
+        `${lastName}${firstName?.charAt(0) || ""}`,
+        false,
+        true,
+        false
+        // Not a keyword
+      );
       authorTags.push(`#${sanitizedTag}`);
       const yamlAuthor = firstName ? `${firstName} ${lastName}` : lastName;
       authorsYaml.push(yamlAuthor);
@@ -28961,7 +28978,7 @@ var BibLaTeXPlugin = class extends import_obsidian2.Plugin {
             if (cleaned) {
               const splitted = cleaned.split(",").map((k) => k.trim());
               keywordsHuman = splitted;
-              keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw, false, true)}`);
+              keywordArray = splitted.map((kw) => `#${this.sanitizeString(kw, false, true, true)}`);
             }
           } else if (Array.isArray(fields.keywords)) {
             keywordsHuman = fields.keywords.map((kw) => String(kw));
